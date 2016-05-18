@@ -48,7 +48,7 @@ highlights the main external functionality:
         int width = 800; int height = 600;
         std::vector<int> offset(3,0);
         libdvid::BinaryDataPtr data = 
-            service.retrieve_image(width, height, offset)
+            service.retrieve_image(width, height, offset);
 
         return 0;
     }

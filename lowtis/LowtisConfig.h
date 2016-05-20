@@ -13,7 +13,7 @@ typedef std::shared_ptr<LowtisConfig> LowtisConfigPtr;
  * Options for image service.  Compile with c++11.
 */
 struct LowtisConfig {
-    LowtisConfigPtr create_pointer()
+    virtual LowtisConfigPtr create_pointer()
     {
         return LowtisConfigPtr(new LowtisConfig(*this));
     }
@@ -27,6 +27,7 @@ struct LowtisConfig {
 
     size_t bytedepth = 8; 
    
+    unsigned char emptyval = 0;    
 
     std::string username = "anonymous"; 
     // ?! add callback here
@@ -39,11 +40,11 @@ struct LowtisConfig {
  * Configuration settings if using DVID back-end.
 */
 struct DVIDConfig : public LowtisConfig {
-    LowtisConfigPtr creater_pointer()
+    LowtisConfigPtr create_pointer()
     {
         return LowtisConfigPtr(new DVIDConfig(*this));
     }
-    
+
     std::string dvid_server;
     std::string dvid_uuid;
     std::string datatypename;

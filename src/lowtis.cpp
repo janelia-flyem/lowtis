@@ -40,6 +40,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
     vector<unsigned int> dims;
     dims.push_back(width);
     dims.push_back(height);
+    dims.push_back(1);
     vector<DVIDCompressedBlock> blocks = fetcher->intersecting_blocks(dims, offset);
 
     // check cache and save missing blocks
@@ -71,10 +72,19 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
 
     // populate image from blocks and return data
     for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
-        BinaryDataPtr dataptr = iter->get_uncompressed_data();
+        bool emptyblock = false;
+        if (!(iter->get_data())) {
+            emptyblock = true;
+        }
+        
         size_t blocksize = iter->get_blocksize();
-        const unsigned char* raw_data = dataptr->get_raw();
-       
+
+        const unsigned char* raw_data = 0;
+
+        if (!emptyblock) {
+            raw_data = iter->get_uncompressed_data()->get_raw();
+        }
+
         // extract common dim3 offset (will refer to as 'z')
         vector<int> toffset = iter->get_offset();
         int zoff = offset[2] - toffset[2];
@@ -99,7 +109,11 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         for (int ypos = starty; ypos < finishy; ++ypos) {
             for (int xpos = startx; xpos < finishx; ++xpos) {
                 for (int bytepos = 0; bytepos < config->bytedepth; ++bytepos) {
-                    *bytebuffer_temp = *raw_data;
+                    if (!emptyblock) {
+                        *bytebuffer_temp = *raw_data;
+                    } else {
+                        *bytebuffer_temp = config->emptyval;
+                    }
                     ++raw_data;
                     ++bytebuffer_temp;
                 } 
@@ -111,5 +125,8 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
     gmutex.unlock();
 
     // TODO: avoid extra mem copy
-    return libdvid::BinaryData::create_binary_data(bytebuffer, width*height*config->bytedepth);
+    libdvid::BinaryDataPtr data = libdvid::BinaryData::create_binary_data(bytebuffer, width*height*config->bytedepth);
+    delete []bytebuffer;
+
+    return data;
 }

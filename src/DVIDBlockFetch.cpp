@@ -49,8 +49,9 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
     bdims.push_back(dims[0]);
     bdims.push_back(dims[1]);
     bdims.push_back(dims[2]);
-    return node_service.get_labelblocks3D(labeltypename,
+    vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_labelblocks3D(labeltypename,
            bdims, offset, false);
+    return blocks;
 }
 
 void DVIDBlockFetch::extract_specific_blocks(
@@ -63,22 +64,22 @@ void DVIDBlockFetch::extract_specific_blocks(
     for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
         vector<int> offset = iter->get_offset();
         size_t blocksize = iter->get_blocksize();
-        if (minx < offset[0]) {
+        if (offset[0] < minx) {
             minx = offset[0];
         }
-        if (miny < offset[1]) {
+        if (offset[1] < miny) {
             miny = offset[1];
         }
-        if (minz < offset[2]) {
+        if (offset[2] < minz) {
             minz = offset[2];
         }
-        if (maxx > (offset[0]+blocksize)) {
+        if (int(offset[0]+blocksize) > maxx) {
             maxx = offset[0]+blocksize;
         }
-        if (maxy > (offset[1]+blocksize)) {
+        if (int(offset[1]+blocksize) > maxy) {
             maxy = offset[1]+blocksize;
         }
-        if (maxz > (offset[2]+blocksize)) {
+        if (int(offset[2]+blocksize) > maxz) {
             maxz = offset[2]+blocksize;
         }
     }
@@ -109,7 +110,6 @@ void DVIDBlockFetch::extract_specific_blocks(
         data.block = *iter;
         cache[coords] = data;
     }
-
     for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
         BlockCoords coords;
         vector<int> offset = iter->get_offset();
@@ -118,16 +118,16 @@ void DVIDBlockFetch::extract_specific_blocks(
         coords.z = offset[2];
 
         auto dataiter = cache.find(coords);
-        if (dataiter == cache.end()) {
-            throw LowtisErr("Failed to fetch block");
+        if (dataiter != cache.end()) {
+            //throw LowtisErr("Failed to fetch block");
+            iter->set_data(dataiter->second.block.get_data());
         }
-        iter->set_data(dataiter->second.block.get_data());
     }
 }
 
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
         vector<unsigned int> dims, vector<int> offset)
-{
+{   
     // make block aligned dims and offset
     int modoffset = offset[0] % blocksize;
     offset[0] -= modoffset;
@@ -141,17 +141,17 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
     offset[2] -= modoffset;
     dims[2] += modoffset;
    
-    int modsize = offset[0] % blocksize;
+    int modsize = dims[0] % blocksize;
     if (modsize != 0) {
         dims[0] += (blocksize - modsize);
     } 
 
-    modsize = offset[1] % blocksize;
+    modsize = dims[1] % blocksize;
     if (modsize != 0) {
         dims[1] += (blocksize - modsize);
     } 
     
-    modsize = offset[2] % blocksize;
+    modsize = dims[2] % blocksize;
     if (modsize != 0) {
         dims[2] += (blocksize - modsize);
     } 
@@ -163,15 +163,17 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
         for (int y = offset[1]; y < (dims[1]/blocksize); ++y) {
             for (int x = offset[0]; x < (dims[0]/blocksize); ++x) {
                 vector<int> toffset;
-                toffset.push_back(x);
-                toffset.push_back(y);
-                toffset.push_back(z);
+                toffset.push_back(x*blocksize);
+                toffset.push_back(y*blocksize);
+                toffset.push_back(z*blocksize);
                 libdvid::DVIDCompressedBlock cblock(emptyptr, toffset,
                         blocksize, sizeof(libdvid::uint64));
                 blocks.push_back(cblock);
             }
         }
     }
+
+    return blocks;
 }
 
 

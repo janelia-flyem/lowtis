@@ -2,6 +2,7 @@
 #define LOWTISCONFIG_H
 
 #include <memory>
+#include <string>
 
 namespace lowtis {
 
@@ -12,7 +13,7 @@ typedef std::shared_ptr<LowtisConfig> LowtisConfigPtr;
  * Options for image service.  Compile with c++11.
 */
 struct LowtisConfig {
-    LowtisConfigPtr creater_pointer()
+    LowtisConfigPtr create_pointer()
     {
         return LowtisConfigPtr(new LowtisConfig(*this));
     }

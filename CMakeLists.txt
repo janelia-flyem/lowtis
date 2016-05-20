@@ -59,7 +59,8 @@ else()
     endif()
 endif()
 
-set (support_LIBS ${LIBDVIDCPP_LIBRARIES} ${JSON_LIBRARIES} ${boost_LIBS} ${PNG_LIBRARIES} ${CURL_LIBRARIES} ${JPEG_LIBRARIES} ${LZ4_LIBRARY})
+#set (support_LIBS ${LIBDVIDCPP_LIBRARIES} ${JSON_LIBRARIES} ${boost_LIBS} ${PNG_LIBRARIES} ${CURL_LIBRARIES} ${JPEG_LIBRARIES} ${LZ4_LIBRARY})
+set (support_LIBS ${LIBDVIDCPP_LIBRARIES})
 
 include_directories (BEFORE ${CMAKE_SOURCE_DIR}/lowtis ${CMAKE_SOURCE_DIR})
 
@@ -76,7 +77,6 @@ add_library (lowtis SHARED
              src/lowtis.cpp)
 
 target_link_libraries (lowtis ${support_LIBS})
-
 
 # config file for CMake FIND_PACKAGE command
 set (lowtis_version "0.1.0")

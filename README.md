@@ -31,16 +31,17 @@ and interact with the functions in lowtis/lowtis.h.  The simple example below
 highlights the main external functionality:
 
     #include <lowtis/lowtis.h>
+
     using namespace::lowtis;
 
     int main()
     {
         // create dvid config
         DVIDConfig config;
+        
         config.dvid_server = "127.0.0.1:8000";
         config.dvid_uuid = "abcd";
         config.datatypename = "segmentation";
-
         // create service for 2D image fetching
         ImageService service(config.create_pointer());
 
@@ -48,7 +49,7 @@ highlights the main external functionality:
         int width = 800; int height = 600;
         std::vector<int> offset(3,0);
         libdvid::BinaryDataPtr data = 
-            service.retrieve_image(width, height, offset)
+            service.retrieve_image(width, height, offset);
 
         return 0;
     }

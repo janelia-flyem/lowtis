@@ -44,7 +44,7 @@ highlights the main external functionality:
         config.datatypename = "segmentation";
         
         // create service for 2D image fetching
-        ImageService service(config.create_pointer());
+        ImageService service(config);
 
         // fetch image from 0,0,0
         int width = 800; int height = 600;

@@ -6,11 +6,11 @@ using namespace lowtis;
 using namespace libdvid;
 using std::vector;
 
-ImageService::ImageService(LowtisConfigPtr config_) : config(config_)
+ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
-    fetcher = create_blockfetcher(config);
-    cache.set_timer(config->refresh_rate);
-    cache.set_max_size(config->cache_size);
+    fetcher = create_blockfetcher(&config);
+    cache.set_timer(config.refresh_rate);
+    cache.set_max_size(config.cache_size);
 }
 
 void ImageService::pause()
@@ -33,7 +33,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
     gmutex.lock(); // do I need to lock the entire function?
     
     // create image buffer
-    char* bytebuffer = new char[width*height*(config->bytedepth)];
+    char* bytebuffer = new char[width*height*(config.bytedepth)];
 
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
@@ -95,37 +95,37 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         int starty = std::max(offset[1], toffset[1]);
         int finishy = std::min(offset[1]+blocksize, toffset[1]+blocksize);
 
-        unsigned long long iterpos = (zoff - toffset[2]) * blocksize * blocksize * config->bytedepth;
+        unsigned long long iterpos = (zoff - toffset[2]) * blocksize * blocksize * config.bytedepth;
 
         // point to correct plane
         raw_data += iterpos;
         
         // point to correct y,x
-        raw_data += (((toffset[1]-starty)*blocksize*config->bytedepth) + 
-                ((toffset[0]-startx)*config->bytedepth)); 
-        char* bytebuffer_temp = bytebuffer + ((offset[1]-starty)*width*config->bytedepth) +
-           ((offset[0]-startx)*config->bytedepth); 
+        raw_data += (((toffset[1]-starty)*blocksize*config.bytedepth) + 
+                ((toffset[0]-startx)*config.bytedepth)); 
+        char* bytebuffer_temp = bytebuffer + ((offset[1]-starty)*width*config.bytedepth) +
+           ((offset[0]-startx)*config.bytedepth); 
 
         for (int ypos = starty; ypos < finishy; ++ypos) {
             for (int xpos = startx; xpos < finishx; ++xpos) {
-                for (int bytepos = 0; bytepos < config->bytedepth; ++bytepos) {
+                for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
                     if (!emptyblock) {
                         *bytebuffer_temp = *raw_data;
                     } else {
-                        *bytebuffer_temp = config->emptyval;
+                        *bytebuffer_temp = config.emptyval;
                     }
                     ++raw_data;
                     ++bytebuffer_temp;
                 } 
             }
-            raw_data += (blocksize-(finishx-startx))*config->bytedepth;
-            bytebuffer_temp += (width-(finishx-startx))*config->bytedepth;
+            raw_data += (blocksize-(finishx-startx))*config.bytedepth;
+            bytebuffer_temp += (width-(finishx-startx))*config.bytedepth;
         }
     }
     gmutex.unlock();
 
     // TODO: avoid extra mem copy
-    libdvid::BinaryDataPtr data = libdvid::BinaryData::create_binary_data(bytebuffer, width*height*config->bytedepth);
+    libdvid::BinaryDataPtr data = libdvid::BinaryData::create_binary_data(bytebuffer, width*height*config.bytedepth);
     delete []bytebuffer;
 
     return data;

@@ -22,7 +22,7 @@ class ImageService {
      * block fetcher and cache.
      * \param config_ configuration base class
     */ 
-    ImageService(LowtisConfigPtr config_);
+    ImageService(LowtisConfig& config_);
 
 
     // ?! make non-blocking call but block on main request
@@ -61,7 +61,7 @@ class ImageService {
     BlockFetchPtr fetcher;
 
     //! configuration for lowtis
-    LowtisConfigPtr config; 
+    LowtisConfig& config; 
 
     //! class lock
     std::mutex gmutex;

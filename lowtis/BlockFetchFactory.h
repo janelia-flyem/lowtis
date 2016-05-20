@@ -7,6 +7,6 @@
 
 namespace lowtis {
 
-BlockFetchPtr create_blockfetcher(LowtisConfigPtr config);
+BlockFetchPtr create_blockfetcher(LowtisConfig* config);
 
 }

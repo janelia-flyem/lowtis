@@ -3,13 +3,12 @@
 
 using namespace lowtis;
 
-BlockFetchPtr lowtis::create_blockfetcher(LowtisConfigPtr config)
+BlockFetchPtr lowtis::create_blockfetcher(LowtisConfig* config)
 {
-    LowtisConfig * configraw = config.get();
     
     // create dvid block
-    if (auto config = dynamic_cast<DVIDConfig*>(configraw)) {
-        return BlockFetchPtr(new DVIDBlockFetch(*(config)));
+    if (auto configcast = dynamic_cast<DVIDConfig*>(config)) {
+        return BlockFetchPtr(new DVIDBlockFetch(*(configcast)));
     }
 
     return BlockFetchPtr(0);

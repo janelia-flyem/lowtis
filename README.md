@@ -8,9 +8,9 @@ to make accessing DVID block and multi-scale data much easier.
 
 ## Installation
 
-The primary dependency is [libdvid-cpp](https://github
+The primary dependency is [libdvid-cpp](https://github.com/janelia-flyem/libdvid-cpp).
 
-### standalone installation
+### Standalone installation
 
 To install lowtis:
 
@@ -23,10 +23,9 @@ These commands will install the library liblowtis.
 
 ### Conda installation (TBD)
 
-
 ## Usage
 
-The calling program must initialize configuration option in lowtis/LowtisConfig.h
+The calling program must initialize configuration options in lowtis/LowtisConfig.h
 and interact with the functions in lowtis/lowtis.h.  The simple example below
 highlights the main external functionality:
 
@@ -39,9 +38,11 @@ highlights the main external functionality:
         // create dvid config
         DVIDConfig config;
         
+        config.bytedepth = 8;
         config.dvid_server = "127.0.0.1:8000";
         config.dvid_uuid = "abcd";
         config.datatypename = "segmentation";
+        
         // create service for 2D image fetching
         ImageService service(config.create_pointer());
 

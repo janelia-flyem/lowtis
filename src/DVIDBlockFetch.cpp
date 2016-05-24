@@ -57,6 +57,10 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
 void DVIDBlockFetch::extract_specific_blocks(
             vector<libdvid::DVIDCompressedBlock>& blocks)
 {
+    if (blocks.empty()) {
+        return;
+    }
+
     // find bounding box for request 
     int minx = INT_MAX; int miny = INT_MAX; int minz = INT_MAX;
     int maxx = INT_MIN; int maxy = INT_MIN; int maxz = INT_MIN;
@@ -83,7 +87,6 @@ void DVIDBlockFetch::extract_specific_blocks(
             maxz = offset[2]+blocksize;
         }
     }
-
     vector<int> goffset;
     goffset.push_back(minx);
     goffset.push_back(miny);
@@ -159,13 +162,13 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
     vector<libdvid::DVIDCompressedBlock> blocks;
     libdvid::BinaryDataPtr emptyptr(0);
 
-    for (int z = offset[2]; z < (dims[2]/blocksize); ++z) {
-        for (int y = offset[1]; y < (dims[1]/blocksize); ++y) {
-            for (int x = offset[0]; x < (dims[0]/blocksize); ++x) {
+    for (int z = 0; z < (dims[2]/blocksize); ++z) {
+        for (int y = 0; y < (dims[1]/blocksize); ++y) {
+            for (int x = 0; x < (dims[0]/blocksize); ++x) {
                 vector<int> toffset;
-                toffset.push_back(x*blocksize);
-                toffset.push_back(y*blocksize);
-                toffset.push_back(z*blocksize);
+                toffset.push_back(offset[0]+x*blocksize);
+                toffset.push_back(offset[1]+y*blocksize);
+                toffset.push_back(offset[2]+z*blocksize);
                 libdvid::DVIDCompressedBlock cblock(emptyptr, toffset,
                         blocksize, sizeof(libdvid::uint64));
                 blocks.push_back(cblock);

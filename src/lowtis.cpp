@@ -33,7 +33,8 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
     gmutex.lock(); // do I need to lock the entire function?
     
     // create image buffer
-    char* bytebuffer = new char[width*height*(config.bytedepth)];
+    char* bytebuffer = new char[width*height*(config.bytedepth)]{};
+
 
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
@@ -65,7 +66,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
 
     // call interface for blocks desired 
     fetcher->extract_specific_blocks(missing_blocks);
-    
+
     // concatenate block lists
     current_blocks.insert(current_blocks.end(), missing_blocks.begin(), 
             missing_blocks.end());
@@ -76,7 +77,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         if (!(iter->get_data())) {
             emptyblock = true;
         }
-        
+
         size_t blocksize = iter->get_blocksize();
 
         const unsigned char* raw_data = 0;
@@ -91,20 +92,20 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
 
         // find intersection between block and buffer
         int startx = std::max(offset[0], toffset[0]);
-        int finishx = std::min(offset[0]+blocksize, toffset[0]+blocksize);
+        int finishx = std::min(offset[0]+int(width), toffset[0]+int(blocksize));
         int starty = std::max(offset[1], toffset[1]);
-        int finishy = std::min(offset[1]+blocksize, toffset[1]+blocksize);
+        int finishy = std::min(offset[1]+int(height), toffset[1]+int(blocksize));
 
-        unsigned long long iterpos = (zoff - toffset[2]) * blocksize * blocksize * config.bytedepth;
+        unsigned long long iterpos = zoff * blocksize * blocksize * config.bytedepth;
 
         // point to correct plane
         raw_data += iterpos;
         
         // point to correct y,x
-        raw_data += (((toffset[1]-starty)*blocksize*config.bytedepth) + 
-                ((toffset[0]-startx)*config.bytedepth)); 
-        char* bytebuffer_temp = bytebuffer + ((offset[1]-starty)*width*config.bytedepth) +
-           ((offset[0]-startx)*config.bytedepth); 
+        raw_data += (((starty-toffset[1])*blocksize*config.bytedepth) + 
+                ((startx-toffset[0])*config.bytedepth)); 
+        char* bytebuffer_temp = bytebuffer + ((starty-offset[1])*width*config.bytedepth) +
+           ((startx-offset[0])*config.bytedepth); 
 
         for (int ypos = starty; ypos < finishy; ++ypos) {
             for (int xpos = startx; xpos < finishx; ++xpos) {

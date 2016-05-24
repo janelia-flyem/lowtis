@@ -1,17 +1,23 @@
 #include <lowtis/lowtis.h>
+#include <lowtis/BlockFetch.h>
 #include <lowtis/BlockFetchFactory.h>
+#include <lowtis/BlockCache.h>
 #include <vector>
 
 using namespace lowtis;
 using namespace libdvid;
 using std::vector;
+using std::shared_ptr;
 
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
     fetcher = create_blockfetcher(&config);
-    cache.set_timer(config.refresh_rate);
-    cache.set_max_size(config.cache_size);
+    cache = shared_ptr<BlockCache>(new BlockCache);
+    cache->set_timer(config.refresh_rate);
+    cache->set_max_size(config.cache_size);
 }
+
+
 
 void ImageService::pause()
 {
@@ -23,19 +29,15 @@ void ImageService::pause()
 void ImageService::flush_cache()
 {
     gmutex.lock();
-    cache.flush();
+    cache->flush();
     gmutex.unlock();
 }
 
-BinaryDataPtr ImageService::retrieve_image(unsigned int width,
-        unsigned int height, vector<int> offset, int zoom)
+void ImageService::retrieve_image(unsigned int width,
+        unsigned int height, vector<int> offset, char* buffer, int zoom)
 {
     gmutex.lock(); // do I need to lock the entire function?
     
-    // create image buffer
-    char* bytebuffer = new char[width*height*(config.bytedepth)]{};
-
-
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
     vector<unsigned int> dims;
@@ -56,7 +58,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         coords.z = toffset[2];
 
         DVIDCompressedBlock block = *iter;
-        bool found = cache.retrieve_block(coords, block);
+        bool found = cache->retrieve_block(coords, block);
         if (found) {
             current_blocks.push_back(block);
         } else {
@@ -73,7 +75,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
 
 
     for (auto iter = missing_blocks.begin(); iter != missing_blocks.end(); ++iter) {
-        cache.set_block(*iter);
+        cache->set_block(*iter);
     }
 
     // populate image from blocks and return data
@@ -109,7 +111,7 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         // point to correct y,x
         raw_data += (((starty-toffset[1])*blocksize*config.bytedepth) + 
                 ((startx-toffset[0])*config.bytedepth)); 
-        char* bytebuffer_temp = bytebuffer + ((starty-offset[1])*width*config.bytedepth) +
+        char* bytebuffer_temp = buffer + ((starty-offset[1])*width*config.bytedepth) +
            ((startx-offset[0])*config.bytedepth); 
 
         for (int ypos = starty; ypos < finishy; ++ypos) {
@@ -129,10 +131,4 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
         }
     }
     gmutex.unlock();
-
-    // TODO: avoid extra mem copy
-    libdvid::BinaryDataPtr data = libdvid::BinaryData::create_binary_data(bytebuffer, width*height*config.bytedepth);
-    delete []bytebuffer;
-
-    return data;
 }

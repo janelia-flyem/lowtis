@@ -1,8 +1,8 @@
 #ifndef LOWTISCONFIG_H
 #define LOWTISCONFIG_H
 
-#include <memory>
 #include <string>
+#include <memory>
 
 namespace lowtis {
 

@@ -2,11 +2,15 @@
 #define LOWTIS_H
 
 #include <lowtis/LowtisConfig.h>
-#include <lowtis/BlockFetch.h>
-#include <lowtis/BlockCache.h>
-#include <libdvid/BinaryData.h>
+
+#include <mutex>
+#include <memory>
+#include <vector>
 
 namespace lowtis {
+
+struct BlockCache;
+struct BlockFetch;
 
 /*!
  * Main class to access 2D image data.  Requests cannot be made
@@ -24,24 +28,17 @@ class ImageService {
     */ 
     ImageService(LowtisConfig& config_);
 
-
-    // ?! make non-blocking call but block on main request
-    // ?! TODO: background prefetch queue (priorities will change frequently)
-    // ?! load data in callback provided in config
-    // ?! grab bbox that needs to be called after examining cache
-    // ?! call minimum libdvid calls and load in cache
-    // ?! load data a call callback with buffer
-    
     /*!
      * Retrieves image data.  This function is blocking and will
      * return some data.  Depending on the configuration, the
      * callback can be called asynchronously to update the view.
      * \param viewport size of window
      * \param offset offset of image
+     * \param buffer preallocated image buffer (size: height*width*bytedepth)
      * \param zoom zoom level (0 is full zoom)
     :*/ 
-    libdvid::BinaryDataPtr retrieve_image(unsigned int width,
-        unsigned int height, std::vector<int> offset, int zoom=0);
+    void retrieve_image(unsigned int width,
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom=0);
 
     /*!
      * Pause future requests and asynchronous calls.
@@ -55,10 +52,8 @@ class ImageService {
     void flush_cache();
 
   private:
-    // ?! pre-allocated buffer after first size request  
-  
     //! interface to fetch block data
-    BlockFetchPtr fetcher;
+    std::shared_ptr<BlockFetch> fetcher;
 
     //! configuration for lowtis
     LowtisConfig& config; 
@@ -70,7 +65,7 @@ class ImageService {
     bool paused = false;
 
     //! holds block data cache
-    BlockCache cache;
+    std::shared_ptr<BlockCache> cache;
 };
 
 }

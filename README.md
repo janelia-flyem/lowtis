@@ -46,11 +46,11 @@ highlights the main external functionality:
         // create service for 2D image fetching
         ImageService service(config);
 
-        // fetch image from 0,0,0
+        // fetch image from 0,0,0 into buffer
         int width = 800; int height = 600;
         std::vector<int> offset(3,0);
-        libdvid::BinaryDataPtr data = 
-            service.retrieve_image(width, height, offset);
+        char* buffer = new char[width*height*8];
+        service.retrieve_image(width, height, offset, buffer);
         
         // service.flush_cache(); // to reset cache
 

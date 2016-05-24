@@ -71,6 +71,11 @@ BinaryDataPtr ImageService::retrieve_image(unsigned int width,
     current_blocks.insert(current_blocks.end(), missing_blocks.begin(), 
             missing_blocks.end());
 
+
+    for (auto iter = missing_blocks.begin(); iter != missing_blocks.end(); ++iter) {
+        cache.set_block(*iter);
+    }
+
     // populate image from blocks and return data
     for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
         bool emptyblock = false;

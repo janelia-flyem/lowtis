@@ -38,7 +38,7 @@ highlights the main external functionality:
         // create dvid config
         DVIDConfig config;
         
-        config.bytedepth = 8;
+        config.username = "foo@bar.com" 
         config.dvid_server = "127.0.0.1:8000";
         config.dvid_uuid = "abcd";
         config.datatypename = "segmentation";
@@ -51,6 +51,8 @@ highlights the main external functionality:
         std::vector<int> offset(3,0);
         libdvid::BinaryDataPtr data = 
             service.retrieve_image(width, height, offset);
+        
+        // service.flush_cache(); // to reset cache
 
         return 0;
     }

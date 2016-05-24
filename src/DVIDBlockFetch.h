@@ -1,7 +1,7 @@
 #ifndef DVIDBLOCKFETCH_H
 #define DVIDBLOCKFETCH_H
 
-#include <lowtis/BlockFetch.h>
+#include "BlockFetch.h"
 #include <lowtis/LowtisConfig.h>
 #include <libdvid/DVIDNodeService.h>
 

@@ -68,6 +68,41 @@ class ImageService {
     std::shared_ptr<BlockCache> cache;
 };
 
+/*!
+ * Exception handling for general lowtis errors.
+ * It is a wrapper for simple string message.
+*/
+class LowtisErr : public std::exception { 
+  public:
+    /*!
+     * Construct takes a string message for the error.
+     * \param msg_ string message
+    */
+    explicit LowtisErr(std::string msg_) : msg(msg_) {}
+    
+    /*!
+     * Implement exception base class function.
+    */
+    virtual const char* what() const throw()
+    {
+        return msg.c_str();
+    }
+
+    /*!
+     * Empty destructor.
+    */
+    virtual ~LowtisErr() throw() {}
+  protected:
+    
+    //! Error message
+    std::string msg;
+};
+
+/*!
+ * Function that allows formatting of error to standard output.
+*/
+std::ostream& operator<<(std::ostream& os, LowtisErr& err);
+
 }
 
 #endif

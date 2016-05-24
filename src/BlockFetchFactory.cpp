@@ -1,5 +1,5 @@
-#include <lowtis/BlockFetchFactory.h>
-#include <lowtis/DVIDBlockFetch.h>
+#include "BlockFetchFactory.h"
+#include "DVIDBlockFetch.h"
 
 using namespace lowtis;
 

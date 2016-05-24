@@ -3,7 +3,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <lowtis/LowtisConfig.h>
-#include <lowtis/BlockFetch.h>
+#include "BlockFetch.h"
 
 namespace lowtis {
 

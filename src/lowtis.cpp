@@ -1,13 +1,13 @@
 #include <lowtis/lowtis.h>
-#include <lowtis/BlockFetch.h>
-#include <lowtis/BlockFetchFactory.h>
-#include <lowtis/BlockCache.h>
-#include <vector>
+#include "BlockFetch.h"
+#include "BlockFetchFactory.h"
+#include "BlockCache.h"
 
 using namespace lowtis;
 using namespace libdvid;
 using std::vector;
 using std::shared_ptr;
+using std::ostream;
 
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
@@ -132,3 +132,12 @@ void ImageService::retrieve_image(unsigned int width,
     }
     gmutex.unlock();
 }
+
+ostream& operator<<(ostream& os, LowtisErr& err)
+{
+    os << err.what(); 
+    return os;
+}
+
+
+

@@ -1,6 +1,5 @@
-#include <lowtis/DVIDBlockFetch.h>
-#include <lowtis/BlockCache.h>
-#include <lowtis/LowtisException.h>
+#include "DVIDBlockFetch.h"
+#include "BlockCache.h"
 #include <libdvid/DVIDNodeService.h>
 
 using namespace lowtis; using namespace libdvid;

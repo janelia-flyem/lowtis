@@ -1,0 +1,31 @@
+package:
+    name: lowtis
+
+  {% if GIT_DESCRIBE_NUMBER|int == 0 %}
+    version: {{GIT_DESCRIBE_TAG}}
+  {% else %}
+    # If we're using a non-tagged revision, append '.postN' to the version
+    version: {{GIT_DESCRIBE_TAG}}.post{{GIT_DESCRIBE_NUMBER}}
+  {% endif %}
+  
+source:
+  git_url: ../
+  git_tag: HEAD
+
+build:
+  number: 0
+  detect_binary_files_with_prefix: true # (defaults to false)
+
+requirements:
+  build:
+    - gcc 4.8.5
+    - libdvid-cpp >=0.2
+    
+  run:
+    - libgcc
+    - libdvid-cpp >=0.2
+
+about:
+  home: http://github.com/janelia-flyem/lowtis
+  license: BSD (3-clause)
+  summary: C++ library for low-latency image fetching

@@ -8,7 +8,7 @@ to make accessing DVID block and multi-scale data much easier.
 
 ## Installation
 
-The primary dependency is [libdvid-cpp](https://github.com/janelia-flyem/libdvid-cpp).
+The primary dependency is [libdvid-cpp](https://github.com/janelia-flyem/libdvid-cpp).  To build an application that uses the library use a C++11 compatible compiler and add '-llowtis' to the compile line.
 
 ### Standalone installation
 
@@ -36,7 +36,7 @@ highlights the main external functionality:
     int main()
     {
         // create dvid config
-        DVIDConfig config;
+        DVIDLabelblkConfig config;
         
         config.username = "foo@bar.com" 
         config.dvid_server = "127.0.0.1:8000";

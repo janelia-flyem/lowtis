@@ -7,7 +7,7 @@ BlockFetchPtr lowtis::create_blockfetcher(LowtisConfig* config)
 {
     
     // create dvid block
-    if (auto configcast = dynamic_cast<DVIDConfig*>(config)) {
+    if (auto configcast = dynamic_cast<DVIDLabelblkConfig*>(config)) {
         return BlockFetchPtr(new DVIDBlockFetch(*(configcast)));
     }
 

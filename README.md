@@ -15,11 +15,12 @@ The primary dependency is [libdvid-cpp](https://github.com/janelia-flyem/libdvid
 To install lowtis:
 
     % mkdir build; cd build;
-    % cmake ..
+    % cmake -DLIBDVID_INCLUDE=path_to_libdvid_include ..
     % make; make install
 
 Make sure libdvidcpp include and library paths are visible to this build.
-These commands will install the library liblowtis. 
+These commands will install the library liblowtis.  If you are building this
+against libdvid install with conda, add the flag -DCMAKE_PREFIX_PATH=path_to_conda_env.
 
 ### Conda installation (TBD)
 

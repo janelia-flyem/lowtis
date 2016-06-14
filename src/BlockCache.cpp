@@ -46,7 +46,9 @@ void BlockCache::set_block(DVIDCompressedBlock block)
     gmutex.lock();
    
     // insert new block
-    curr_cache_size += block.get_datasize(); 
+    if (block.get_data()) {
+        curr_cache_size += block.get_datasize(); 
+    }
     BlockData bdata;
     bdata.timestamp = time(0); 
     bdata.block = block; 
@@ -56,7 +58,6 @@ void BlockCache::set_block(DVIDCompressedBlock block)
     coords.y = offset[1];
     coords.z = offset[2];
     cache[coords] = bdata;
-
     
     // check if cache is full
     if (curr_cache_size/1000000 > max_size) {
@@ -85,7 +86,9 @@ void BlockCache::remove_old_entries(time_t time_threshold)
     for (auto cache_iter = cache.begin(); cache_iter != cache.end();) {
         if (cache_iter->second.timestamp < time_threshold) {
             // points to next iterator position
-            curr_cache_size -= cache_iter->second.block.get_datasize(); 
+            if (cache_iter->second.block.get_data()) {
+                curr_cache_size -= cache_iter->second.block.get_datasize();
+            }
             cache_iter = cache.erase(cache_iter);
         } else {
             ++cache_iter;

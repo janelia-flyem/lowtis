@@ -87,8 +87,10 @@ void ImageService::retrieve_image(unsigned int width,
 
         const unsigned char* raw_data = 0;
 
+        BinaryDataPtr raw_data_ptr;
         if (!emptyblock) {
-            raw_data = iter->get_uncompressed_data()->get_raw();
+            raw_data_ptr = iter->get_uncompressed_data();
+            raw_data = raw_data_ptr->get_raw();
         }
 
         // extract common dim3 offset (will refer to as 'z')

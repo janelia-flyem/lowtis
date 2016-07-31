@@ -56,7 +56,7 @@ class ImageService {
     std::shared_ptr<BlockFetch> fetcher;
 
     //! configuration for lowtis
-    LowtisConfig& config; 
+    LowtisConfig config; 
 
     //! class lock
     std::mutex gmutex;

@@ -129,7 +129,7 @@ void DVIDBlockFetch::extract_specific_blocks(
 
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
         vector<unsigned int> dims, vector<int> offset)
-{   
+{  
     // make block aligned dims and offset
     int modoffset = offset[0] % blocksize;
     offset[0] -= modoffset;

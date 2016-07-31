@@ -11,7 +11,7 @@ using std::ostream;
 
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
-    fetcher = create_blockfetcher(&config);
+    fetcher = create_blockfetcher(&config_);
     cache = shared_ptr<BlockCache>(new BlockCache);
     cache->set_timer(config.refresh_rate);
     cache->set_max_size(config.cache_size);
@@ -37,7 +37,6 @@ void ImageService::retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom)
 {
     gmutex.lock(); // do I need to lock the entire function?
-   
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
     vector<unsigned int> dims;
@@ -75,6 +74,7 @@ void ImageService::retrieve_image(unsigned int width,
     for (auto iter = missing_blocks.begin(); iter != missing_blocks.end(); ++iter) {
         cache->set_block(*iter);
     }
+
 
     // populate image from blocks and return data
     for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {

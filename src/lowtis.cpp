@@ -37,6 +37,15 @@ void ImageService::retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom)
 {
     gmutex.lock(); // do I need to lock the entire function?
+
+    // adjust offset for zoom
+    for (int i = 0; i < zoom; i++) {
+        offset[0] /= 2;
+        offset[1] /= 2;
+        offset[2] /= 2;
+    }
+
+
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
     vector<unsigned int> dims;
@@ -55,7 +64,8 @@ void ImageService::retrieve_image(unsigned int width,
         coords.x = toffset[0];
         coords.y = toffset[1];
         coords.z = toffset[2];
-
+        coords.zoom = zoom;
+        
         DVIDCompressedBlock block = *iter;
         bool found = cache->retrieve_block(coords, block);
         if (found) {
@@ -66,13 +76,13 @@ void ImageService::retrieve_image(unsigned int width,
     }
 
     // call interface for blocks desired 
-    fetcher->extract_specific_blocks(missing_blocks);
+    fetcher->extract_specific_blocks(missing_blocks, zoom);
     // concatenate block lists
     current_blocks.insert(current_blocks.end(), missing_blocks.begin(), 
             missing_blocks.end());
 
     for (auto iter = missing_blocks.begin(); iter != missing_blocks.end(); ++iter) {
-        cache->set_block(*iter);
+        cache->set_block(*iter, zoom);
     }
 
 

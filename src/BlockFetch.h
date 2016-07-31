@@ -18,22 +18,24 @@ class BlockFetch {
      * Base class virtual function for retrieving subvolume as blocks.
      * \param dims size of subvolume requestsed
      * \param offset offset of subvolume
+     * \param zoom level for downsampled image
      * \return list of compressed blocks
     */
     virtual std::vector<libdvid::DVIDCompressedBlock> extract_blocks(
-            std::vector<unsigned int> dims, std::vector<int> offset) = 0;
+            std::vector<unsigned int> dims, std::vector<int> offset, int zoom) = 0;
 
     /*!
      * Base class virtual function for retrieving blocks specified.
      * \param blocks loads compressed block data into provided coordinates 
     */
     virtual void extract_specific_blocks(
-            std::vector<libdvid::DVIDCompressedBlock>& blocks) = 0;
+            std::vector<libdvid::DVIDCompressedBlock>& blocks, int zoom) = 0;
 
     /*!
      * Base class virtual function for finding intersecting blocks.
      * \param dims size of subvolume requestsed
      * \param offset offset of subvolume
+     * \param zoom level for downsampled image
      * \return list of compressed blocks
     */
     virtual std::vector<libdvid::DVIDCompressedBlock> intersecting_blocks(

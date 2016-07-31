@@ -25,14 +25,14 @@ class DVIDBlockFetch : public BlockFetch {
      * \return list of compressed blocks
     */
     std::vector<libdvid::DVIDCompressedBlock> extract_blocks(
-            std::vector<unsigned int> dims, std::vector<int> offset);
+            std::vector<unsigned int> dims, std::vector<int> offset, int zoom);
 
     /*!
      * Base class virtual function for retrieving blocks specified.
      * \param blocks loads compressed block data into provided coordinates 
     */
     void extract_specific_blocks(
-            std::vector<libdvid::DVIDCompressedBlock>& blocks);
+            std::vector<libdvid::DVIDCompressedBlock>& blocks, int zoom);
 
     /*!
      * Base class virtual function for finding intersecting blocks.

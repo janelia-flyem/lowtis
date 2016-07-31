@@ -13,7 +13,7 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
 }
 
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
-        vector<unsigned int> dims, vector<int> offset)
+        vector<unsigned int> dims, vector<int> offset, int zoom)
 {
     // make block aligned dims and offset
     int modoffset = offset[0] % blocksize;
@@ -48,13 +48,20 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
     bdims.push_back(dims[0]);
     bdims.push_back(dims[1]);
     bdims.push_back(dims[2]);
-    vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_labelblocks3D(labeltypename,
+
+    string dataname_temp = labeltypename;
+    if (zoom > 0) {
+        dataname_temp += "_" + std::to_string(zoom);
+    }
+
+    vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_labelblocks3D(dataname_temp,
            bdims, offset, false);
     return blocks;
 }
 
+// the zoom level is needed to interact with cache and set proper data source
 void DVIDBlockFetch::extract_specific_blocks(
-            vector<libdvid::DVIDCompressedBlock>& blocks)
+            vector<libdvid::DVIDCompressedBlock>& blocks, int zoom)
 {
     if (blocks.empty()) {
         return;
@@ -98,7 +105,7 @@ void DVIDBlockFetch::extract_specific_blocks(
 
     // call main query function
     // TODO: allow parallel requests to decompose an inefficiently packed bbox
-    vector<DVIDCompressedBlock> newblocks = extract_blocks(dims, goffset); 
+    vector<DVIDCompressedBlock> newblocks = extract_blocks(dims, goffset, zoom); 
 
     // find and set requested blocks
     unordered_map<BlockCoords, BlockData> cache;
@@ -108,6 +115,7 @@ void DVIDBlockFetch::extract_specific_blocks(
         coords.x = offset[0];
         coords.y = offset[1];
         coords.z = offset[2];
+        coords.zoom = zoom;
         BlockData data;
         data.block = *iter;
         cache[coords] = data;
@@ -118,6 +126,7 @@ void DVIDBlockFetch::extract_specific_blocks(
         coords.x = offset[0];
         coords.y = offset[1];
         coords.z = offset[2];
+        coords.zoom = zoom;
 
         auto dataiter = cache.find(coords);
         if (dataiter != cache.end()) {

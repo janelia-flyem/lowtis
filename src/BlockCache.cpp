@@ -41,7 +41,7 @@ bool BlockCache::retrieve_block(BlockCoords coords, DVIDCompressedBlock& block)
 
 }
     
-void BlockCache::set_block(DVIDCompressedBlock block)
+void BlockCache::set_block(DVIDCompressedBlock block, int zoom)
 {
     gmutex.lock();
    
@@ -57,6 +57,7 @@ void BlockCache::set_block(DVIDCompressedBlock block)
     coords.x = offset[0];
     coords.y = offset[1];
     coords.z = offset[2];
+    coords.zoom = zoom;
     cache[coords] = bdata;
     
     // check if cache is full

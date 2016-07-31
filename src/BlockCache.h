@@ -13,10 +13,10 @@ struct BlockCoords {
     int x = 0;
     int y = 0;
     int z = 0;
-
+    int zoom = 0;
     bool operator==(const BlockCoords& coord2) const
     {
-        return x == coord2.x && y == coord2.y && z == coord2.z;
+        return x == coord2.x && y == coord2.y && z == coord2.z && zoom == coord2.zoom;
     }
 };
 }
@@ -30,6 +30,7 @@ struct hash<lowtis::BlockCoords> {
         boost::hash_combine(seed, coords.x);
         boost::hash_combine(seed, coords.y);
         boost::hash_combine(seed, coords.z);
+        boost::hash_combine(seed, coords.zoom);
         return seed; 
     }
 };
@@ -85,7 +86,7 @@ class BlockCache {
      * \return true if found block, false otherwise
     */
     bool retrieve_block(BlockCoords coords, libdvid::DVIDCompressedBlock& block);
-    void set_block(libdvid::DVIDCompressedBlock block);
+    void set_block(libdvid::DVIDCompressedBlock block, int zoom);
 
   private:
     

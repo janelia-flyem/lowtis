@@ -7,6 +7,7 @@ using std::string; using std::vector; using std::unordered_map;
 
 DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
         labeltypename(config.datatypename),
+        bytedepth(config.bytedepth),
         node_service(config.dvid_server, config.dvid_uuid, config.username, "lowtis") 
 {
    blocksize = node_service.get_blocksize(labeltypename); 
@@ -54,9 +55,17 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
         dataname_temp += "_" + std::to_string(zoom);
     }
 
-    vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_labelblocks3D(dataname_temp,
-           bdims, offset, false);
-    return blocks;
+    // use grayscale interface for single byte
+    // TODO: eventually replace with single libdvid call
+    if (bytedepth == 1) {
+        vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_grayblocks3D(dataname_temp,
+                bdims, offset, false);
+        return blocks;
+    } else {
+        vector<libdvid::DVIDCompressedBlock> blocks = node_service.get_labelblocks3D(dataname_temp,
+                bdims, offset, false);
+        return blocks;
+    }
 }
 
 // the zoom level is needed to interact with cache and set proper data source

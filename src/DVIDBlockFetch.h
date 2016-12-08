@@ -46,6 +46,7 @@ class DVIDBlockFetch : public BlockFetch {
 
   private:
     std::string labeltypename;
+    size_t bytedepth;
     libdvid::DVIDNodeService node_service;
     size_t blocksize;
 };

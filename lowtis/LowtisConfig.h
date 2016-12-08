@@ -47,6 +47,13 @@ struct DVIDConfig : public LowtisConfig {
     std::string datatypename;
 };
 
+struct DVIDGrayblkConfig : public DVIDConfig {
+    DVIDGrayblkConfig() : DVIDConfig(1)
+    {
+        refresh_rate = 0;
+    }
+};
+
 struct DVIDLabelblkConfig : public DVIDConfig {
     DVIDLabelblkConfig() : DVIDConfig(8) {}
 };

@@ -179,6 +179,11 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
     vector<libdvid::DVIDCompressedBlock> blocks;
     libdvid::BinaryDataPtr emptyptr(0);
 
+    DVIDCompressedBlock::CompressType ctype = DVIDCompressedBlock::lz4;
+    if (bytedepth == 1) {
+        ctype = DVIDCompressedBlock::jpeg;
+    }
+
     for (int z = 0; z < (dims[2]/blocksize); ++z) {
         for (int y = 0; y < (dims[1]/blocksize); ++y) {
             for (int x = 0; x < (dims[0]/blocksize); ++x) {
@@ -187,7 +192,7 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
                 toffset.push_back(offset[1]+y*blocksize);
                 toffset.push_back(offset[2]+z*blocksize);
                 libdvid::DVIDCompressedBlock cblock(emptyptr, toffset,
-                        blocksize, sizeof(libdvid::uint64));
+                        blocksize, bytedepth, ctype);
                 blocks.push_back(cblock);
             }
         }

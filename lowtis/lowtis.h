@@ -38,7 +38,7 @@ class ImageService {
      * \param zoom zoom level (0 is full zoom)
     :*/ 
     void retrieve_image(unsigned int width,
-        unsigned int height, std::vector<int> offset, char* buffer, int zoom=0);
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom=0, bool centercut=false);
 
     /*!
      * Pause future requests and asynchronous calls.
@@ -52,6 +52,9 @@ class ImageService {
     void flush_cache();
 
   private:
+    void _retrieve_image(unsigned int width,
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom=0);
+    
     //! interface to fetch block data
     std::shared_ptr<BlockFetch> fetcher;
 
@@ -66,6 +69,9 @@ class ImageService {
 
     //! holds block data cache
     std::shared_ptr<BlockCache> cache;
+    
+    //! holds decompressed block data cache (when decompression is slow)
+    std::shared_ptr<BlockCache> uncompressed_cache;
 };
 
 /*!

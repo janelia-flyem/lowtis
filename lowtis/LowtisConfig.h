@@ -21,8 +21,11 @@ struct LowtisConfig {
     //! cache limit (in MBs)
     // TODO: make dynamic?? 
     unsigned int cache_size = 1000;
-  
-    //! default value of empty block 
+ 
+    //! uncompressed cache limit (in MBs) -- default off 
+    unsigned int uncompressed_cache_size = 0;
+
+    //! default value of empty block
     unsigned char emptyval = 0;    
 
     //! user calling program
@@ -30,6 +33,10 @@ struct LowtisConfig {
     
     //! number of bytes per pixel
     size_t bytedepth = 1; 
+    
+    //! size of middle region to fetch first (0,0) means make
+    //! the call non-blocking
+    std::tuple<int, int> centercut;
     
     // ?! add callback here
 
@@ -51,6 +58,7 @@ struct DVIDGrayblkConfig : public DVIDConfig {
     DVIDGrayblkConfig() : DVIDConfig(1)
     {
         refresh_rate = 0;
+        uncompressed_cache_size = 1000;
     }
 };
 

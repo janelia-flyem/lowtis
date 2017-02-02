@@ -2,12 +2,16 @@
 #include "BlockFetch.h"
 #include "BlockFetchFactory.h"
 #include "BlockCache.h"
+#include <boost/thread/thread.hpp>
+#include <time.h>
+#include <chrono>
 
 using namespace lowtis;
 using namespace libdvid;
 using std::vector;
 using std::shared_ptr;
 using std::ostream;
+using std::get;
 
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
@@ -15,9 +19,13 @@ ImageService::ImageService(LowtisConfig& config_) : config(config_)
     cache = shared_ptr<BlockCache>(new BlockCache);
     cache->set_timer(config.refresh_rate);
     cache->set_max_size(config.cache_size);
+
+    if (config.uncompressed_cache_size > 0) {
+        uncompressed_cache = shared_ptr<BlockCache>(new BlockCache);
+        uncompressed_cache->set_timer(config.refresh_rate);
+        uncompressed_cache->set_max_size(config.uncompressed_cache_size);
+    }
 }
-
-
 
 void ImageService::pause()
 {
@@ -33,10 +41,127 @@ void ImageService::flush_cache()
     gmutex.unlock();
 }
 
+void decompress_block(vector<DVIDCompressedBlock>* blocks, int id, int num_threads, int zoom, shared_ptr<BlockCache> uncompressed_cache)
+{
+    BinaryDataPtr uncompressed_data;
+    int curr_id = 0;
+    for (auto iter = blocks->begin(); iter != blocks->end(); ++iter, ++curr_id) {
+        if ((curr_id % num_threads) == id) {
+            if ((iter->get_data())) {
+                // check of block exists in uncompressed_cache 
+                BlockCoords coords; 
+                vector<int> toffset = iter->get_offset();
+                coords.x = toffset[0];
+                coords.y = toffset[1];
+                coords.z = toffset[2];
+                coords.zoom = zoom;
+
+                DVIDCompressedBlock dblock = *iter;
+                bool found = uncompressed_cache->retrieve_block(coords, dblock);
+               
+                if (!found) {
+                    // check if already decompressed to avoid decompress
+                    uncompressed_data = iter->get_uncompressed_data(); 
+                    size_t bsize = iter->get_blocksize();
+                    size_t tsize = iter->get_typesize();
+
+                    DVIDCompressedBlock temp_block(uncompressed_data, toffset, bsize, tsize, DVIDCompressedBlock::uncompressed);
+                    uncompressed_cache->set_block(temp_block, zoom);
+                    (*blocks)[curr_id] = temp_block;
+                } else {
+                    (*blocks)[curr_id] = dblock;
+                }
+            }
+        }
+    }
+}
+
 void ImageService::retrieve_image(unsigned int width,
+        unsigned int height, vector<int> offset, char* buffer, int zoom, bool centercut)
+{
+    if (!centercut) {
+        return _retrieve_image(width, height, offset, buffer, zoom);
+    } else {
+        // call as boost threads and join
+        boost::thread_group threads;
+
+        // retrieve high-resolution center
+        unsigned int cwidth = get<0>(config.centercut);
+        unsigned int cheight = get<0>(config.centercut);
+        char *buffer2 = new char[cwidth*cheight*config.bytedepth];
+       
+        vector<int> tempoffset = offset; 
+        tempoffset[0] += (width-cwidth)/2;
+        tempoffset[1] += (height-cheight)/2;
+
+        //boost::thread* t1 = new boost::thread(&ImageService::_retrieve_image, this, cwidth, cheight, tempoffset, buffer2, zoom);
+        //threads.add_thread(t1);
+
+        // retrieve 1/4 image at lower resolution
+        // !! this requires the caller to avoid using the fovia if at the lowest resolution already
+        char *buffer3 = new char[width/2*height/2*config.bytedepth];
+        
+        //boost::thread* t2 = new boost::thread(&ImageService::_retrieve_image, this, width/2, height/2, offset, buffer3, zoom+1);
+        _retrieve_image(width/2, height/2, offset, buffer3, zoom+1);
+        //threads.add_thread(t2);
+       
+        // wait for results 
+        //threads.join_all();
+
+        // set buffers
+        // write low resolution version into buffer
+        char * bufferiter = buffer;
+        char * bufferiter2 = buffer;
+        for (int j = 0; j < height/2; j++) {
+            char * bufferiter = buffer + (2*j*width*config.bytedepth);
+            char * bufferiter2 = bufferiter + (width*config.bytedepth);
+            for (int i = 0; i < width/2; i++) {
+                for (int iter = 0; iter < config.bytedepth; iter++) {
+                    // write into four spots (simple downsample)
+                    *bufferiter = *buffer3;
+                    bufferiter[config.bytedepth] = *buffer3;
+                    ++bufferiter;
+
+                    *bufferiter2 = *buffer3;
+                    bufferiter2[config.bytedepth] = *buffer3;
+                    ++bufferiter2;
+
+                    ++buffer3;
+                }
+                bufferiter += (config.bytedepth);
+                bufferiter2 += (config.bytedepth);
+            }
+        } 
+
+        // write center cut
+        /*for (int j = 0; j < cheight; ++j) {
+            char * bufferiter = buffer + ((j+(height-cheight)/2)*width*config.bytedepth) + (width-cwidth)/2;
+            for (int i = 0; i < cwidth; ++i) {
+                for (int iter = 0; iter < config.bytedepth; iter++) {
+                    *bufferiter = *buffer2;
+                    
+                    ++buffer2;
+                    ++bufferiter;
+                }
+            }
+        }*/
+
+
+        // TODO: keep a memory buffer to avoid reallocation (already know centercut size)
+        //delete []buffer2;
+        //delete []buffer3;
+        //delete t1;
+        //delete t2;
+
+        return;
+    }
+}
+
+void ImageService::_retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom)
 {
     gmutex.lock(); // do I need to lock the entire function?
+    auto initial_time = std::chrono::high_resolution_clock::now(); 
 
     // adjust offset for zoom
     for (int i = 0; i < zoom; i++) {
@@ -75,17 +200,42 @@ void ImageService::retrieve_image(unsigned int width,
         }
     }
 
+    // fetch data    
+    auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
+    
     // call interface for blocks desired 
     fetcher->extract_specific_blocks(missing_blocks, zoom);
-    // concatenate block lists
+    
+    auto end_fetch_time = std::chrono::high_resolution_clock::now(); 
+    //std::cout << "fetch time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_fetch_time-start_fetch_time).count() << " milliseconds" << std::endl;
+
     current_blocks.insert(current_blocks.end(), missing_blocks.begin(), 
             missing_blocks.end());
 
+    // add missing blocks to regular cache 
     for (auto iter = missing_blocks.begin(); iter != missing_blocks.end(); ++iter) {
         cache->set_block(*iter, zoom);
     }
 
+    // decompress blocks if necessary
+    if (uncompressed_cache) { 
+        auto ct1 = std::chrono::high_resolution_clock::now(); 
 
+        boost::thread_group threads; // destructor auto deletes threads
+        int num_threads = 8; // ?! do dynamically
+
+        // ?!
+        vector<boost::thread*> curr_threads;  
+        for (int i = 0; i < num_threads; ++i) {
+            boost::thread* t = new boost::thread(decompress_block, &current_blocks, i, num_threads, zoom, uncompressed_cache);
+            threads.add_thread(t);
+            curr_threads.push_back(t);
+        } 
+        threads.join_all();
+        
+        auto ct2 = std::chrono::high_resolution_clock::now(); 
+        //std::cout << "decompress: " << std::chrono::duration_cast<std::chrono::milliseconds>(ct2-ct1).count() << " milliseconds" << std::endl;
+    }
     // populate image from blocks and return data
     for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
         bool emptyblock = false;
@@ -140,8 +290,14 @@ void ImageService::retrieve_image(unsigned int width,
             bytebuffer_temp += (width-(finishx-startx))*config.bytedepth;
         }
     }
+    
+    auto final_time = std::chrono::high_resolution_clock::now(); 
+    //std::cout << "tile time: " << std::chrono::duration_cast<std::chrono::milliseconds>(final_time-initial_time).count() << " milliseconds" << std::endl;
     gmutex.unlock();
 }
+
+
+
 
 ostream& operator<<(ostream& os, LowtisErr& err)
 {

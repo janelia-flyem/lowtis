@@ -16,6 +16,7 @@ using std::get;
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
     fetcher = create_blockfetcher(&config_);
+    fetcher2 = create_blockfetcher(&config_);
     cache = shared_ptr<BlockCache>(new BlockCache);
     cache->set_timer(config.refresh_rate);
     cache->set_max_size(config.cache_size);
@@ -45,6 +46,7 @@ void decompress_block(vector<DVIDCompressedBlock>* blocks, int id, int num_threa
 {
     BinaryDataPtr uncompressed_data;
     int curr_id = 0;
+
     for (auto iter = blocks->begin(); iter != blocks->end(); ++iter, ++curr_id) {
         if ((curr_id % num_threads) == id) {
             if ((iter->get_data())) {
@@ -80,7 +82,9 @@ void ImageService::retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom, bool centercut)
 {
     if (!centercut) {
-        return _retrieve_image(width, height, offset, buffer, zoom);
+        gmutex.lock();
+        _retrieve_image(width, height, offset, buffer, zoom, fetcher);
+        gmutex.unlock();
     } else {
         // call as boost threads and join
         boost::thread_group threads;
@@ -89,78 +93,85 @@ void ImageService::retrieve_image(unsigned int width,
         unsigned int cwidth = get<0>(config.centercut);
         unsigned int cheight = get<0>(config.centercut);
         char *buffer2 = new char[cwidth*cheight*config.bytedepth];
-       
-        vector<int> tempoffset = offset; 
-        tempoffset[0] += (width-cwidth)/2;
-        tempoffset[1] += (height-cheight)/2;
-
-        //boost::thread* t1 = new boost::thread(&ImageService::_retrieve_image, this, cwidth, cheight, tempoffset, buffer2, zoom);
-        //threads.add_thread(t1);
-
+ 
         // retrieve 1/4 image at lower resolution
         // !! this requires the caller to avoid using the fovia if at the lowest resolution already
         char *buffer3 = new char[width/2*height/2*config.bytedepth];
-        
-        //boost::thread* t2 = new boost::thread(&ImageService::_retrieve_image, this, width/2, height/2, offset, buffer3, zoom+1);
-        _retrieve_image(width/2, height/2, offset, buffer3, zoom+1);
-        //threads.add_thread(t2);
+
+        // make new offset for small window
+        vector<int> tempoffset = offset;
+        int offset0 = (width-cwidth)/2;
+        int offset1 = (height-cheight)/2;
+        for (int i = 0; i < zoom; ++i) {
+            offset0 *= 2;
+            offset1 *= 2;
+        }
+        tempoffset[0] += offset0;
+        tempoffset[1] += offset1;
+
+        gmutex.lock();
+        boost::thread* t1 = new boost::thread(&ImageService::_retrieve_image, this, cwidth, cheight, tempoffset, buffer2, zoom, fetcher);
+        threads.add_thread(t1);
+
+        boost::thread* t2 = new boost::thread(&ImageService::_retrieve_image, this, width/2, height/2, offset, buffer3, zoom+1, fetcher2);
+        //_retrieve_image(width/2, height/2, offset, buffer3, zoom+1, fetcher2);
+        threads.add_thread(t2);
        
         // wait for results 
-        //threads.join_all();
-
+        threads.join_all();
+        gmutex.unlock();
+       
         // set buffers
         // write low resolution version into buffer
         char * bufferiter = buffer;
         char * bufferiter2 = buffer;
+        char* buffer3_iter = buffer3;
         for (int j = 0; j < height/2; j++) {
             char * bufferiter = buffer + (2*j*width*config.bytedepth);
             char * bufferiter2 = bufferiter + (width*config.bytedepth);
             for (int i = 0; i < width/2; i++) {
                 for (int iter = 0; iter < config.bytedepth; iter++) {
                     // write into four spots (simple downsample)
-                    *bufferiter = *buffer3;
-                    bufferiter[config.bytedepth] = *buffer3;
+                    *bufferiter = *buffer3_iter;
+                    bufferiter[config.bytedepth] = *buffer3_iter;
                     ++bufferiter;
 
-                    *bufferiter2 = *buffer3;
-                    bufferiter2[config.bytedepth] = *buffer3;
+                    *bufferiter2 = *buffer3_iter;
+                    bufferiter2[config.bytedepth] = *buffer3_iter;
                     ++bufferiter2;
 
-                    ++buffer3;
+                    ++buffer3_iter;
                 }
                 bufferiter += (config.bytedepth);
                 bufferiter2 += (config.bytedepth);
             }
         } 
-
+        
         // write center cut
-        /*for (int j = 0; j < cheight; ++j) {
+        char* buffer2_iter = buffer2;
+        for (int j = 0; j < cheight; ++j) {
             char * bufferiter = buffer + ((j+(height-cheight)/2)*width*config.bytedepth) + (width-cwidth)/2;
             for (int i = 0; i < cwidth; ++i) {
                 for (int iter = 0; iter < config.bytedepth; iter++) {
-                    *bufferiter = *buffer2;
+                    *bufferiter = *buffer2_iter;
                     
-                    ++buffer2;
+                    ++buffer2_iter;
                     ++bufferiter;
                 }
             }
-        }*/
+        }
 
 
         // TODO: keep a memory buffer to avoid reallocation (already know centercut size)
-        //delete []buffer2;
-        //delete []buffer3;
-        //delete t1;
-        //delete t2;
+        delete []buffer2;
+        delete []buffer3;
 
-        return;
     }
 }
 
 void ImageService::_retrieve_image(unsigned int width,
-        unsigned int height, vector<int> offset, char* buffer, int zoom)
+        unsigned int height, vector<int> offset, char* buffer, int zoom, shared_ptr<BlockFetch> curr_fetcher)
 {
-    gmutex.lock(); // do I need to lock the entire function?
     auto initial_time = std::chrono::high_resolution_clock::now(); 
 
     // adjust offset for zoom
@@ -170,14 +181,13 @@ void ImageService::_retrieve_image(unsigned int width,
         offset[2] /= 2;
     }
 
-
     // find intersecting blocks
     // TODO: make 2D call instead (remove dims and say dim1, dim2)
     vector<unsigned int> dims;
     dims.push_back(width);
     dims.push_back(height);
     dims.push_back(1);
-    vector<DVIDCompressedBlock> blocks = fetcher->intersecting_blocks(dims, offset);
+    vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, offset);
 
     // check cache and save missing blocks
     vector<DVIDCompressedBlock> current_blocks;
@@ -204,7 +214,7 @@ void ImageService::_retrieve_image(unsigned int width,
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
     
     // call interface for blocks desired 
-    fetcher->extract_specific_blocks(missing_blocks, zoom);
+    curr_fetcher->extract_specific_blocks(missing_blocks, zoom);
     
     auto end_fetch_time = std::chrono::high_resolution_clock::now(); 
     //std::cout << "fetch time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_fetch_time-start_fetch_time).count() << " milliseconds" << std::endl;
@@ -224,7 +234,6 @@ void ImageService::_retrieve_image(unsigned int width,
         boost::thread_group threads; // destructor auto deletes threads
         int num_threads = 8; // ?! do dynamically
 
-        // ?!
         vector<boost::thread*> curr_threads;  
         for (int i = 0; i < num_threads; ++i) {
             boost::thread* t = new boost::thread(decompress_block, &current_blocks, i, num_threads, zoom, uncompressed_cache);
@@ -293,7 +302,6 @@ void ImageService::_retrieve_image(unsigned int width,
     
     auto final_time = std::chrono::high_resolution_clock::now(); 
     //std::cout << "tile time: " << std::chrono::duration_cast<std::chrono::milliseconds>(final_time-initial_time).count() << " milliseconds" << std::endl;
-    gmutex.unlock();
 }
 
 

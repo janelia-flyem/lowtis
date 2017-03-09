@@ -53,17 +53,20 @@ class ImageService {
 
   private:
     void _retrieve_image(unsigned int width,
-        unsigned int height, std::vector<int> offset, char* buffer, int zoom=0);
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom, std::shared_ptr<BlockFetch> curr_fetcher);
     
     //! interface to fetch block data
     std::shared_ptr<BlockFetch> fetcher;
+    
+    //! interface to fetch low-res block data
+    std::shared_ptr<BlockFetch> fetcher2;
 
     //! configuration for lowtis
     LowtisConfig config; 
 
     //! class lock
     std::mutex gmutex;
-
+    
     //! pause mode
     bool paused = false;
 

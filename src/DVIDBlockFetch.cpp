@@ -1,47 +1,56 @@
 #include "DVIDBlockFetch.h"
-#include "BlockCache.h"
 #include <libdvid/DVIDNodeService.h>
+#include <unordered_map>
+#include "BlockCache.h"
 
 using namespace lowtis; using namespace libdvid;
 using std::string; using std::vector; using std::unordered_map;
 
 DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
         labeltypename(config.datatypename),
-        bytedepth(config.bytedepth),
         node_service(config.dvid_server, config.dvid_uuid, config.username, "lowtis") 
 {
-   blocksize = node_service.get_blocksize(labeltypename); 
+    size_t isoblksize = node_service.get_blocksize(labeltypename); 
+    blocksize = std::make_tuple(isoblksize, isoblksize, isoblksize);
+    bytedepth = config.bytedepth;
+    // only supports grayscale jpeg and lz4 labels
+    if (bytedepth == 1) {
+        compression_type = DVIDCompressedBlock::jpeg;
+    } else {
+        compression_type = DVIDCompressedBlock::lz4;
+    }
 }
 
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
         vector<unsigned int> dims, vector<int> offset, int zoom)
 {
+    size_t isoblksize = std::get<0>(blocksize);
     // make block aligned dims and offset
-    int modoffset = offset[0] % blocksize;
+    int modoffset = offset[0] % isoblksize;
     offset[0] -= modoffset;
     dims[0] += modoffset;
 
-    modoffset = offset[1] % blocksize;
+    modoffset = offset[1] % isoblksize;
     offset[1] -= modoffset;
     dims[1] += modoffset;
 
-    modoffset = offset[2] % blocksize;
+    modoffset = offset[2] % isoblksize;
     offset[2] -= modoffset;
     dims[2] += modoffset;
    
-    int modsize = offset[0] % blocksize;
+    int modsize = offset[0] % isoblksize;
     if (modsize != 0) {
-        dims[0] += (blocksize - modsize);
+        dims[0] += (isoblksize - modsize);
     } 
 
-    modsize = offset[1] % blocksize;
+    modsize = offset[1] % isoblksize;
     if (modsize != 0) {
-        dims[1] += (blocksize - modsize);
+        dims[1] += (isoblksize - modsize);
     } 
     
-    modsize = offset[2] % blocksize;
+    modsize = offset[2] % isoblksize;
     if (modsize != 0) {
-        dims[2] += (blocksize - modsize);
+        dims[2] += (isoblksize - modsize);
     } 
 
     // call libdvid
@@ -144,61 +153,4 @@ void DVIDBlockFetch::extract_specific_blocks(
         }
     }
 }
-
-vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::intersecting_blocks(
-        vector<unsigned int> dims, vector<int> offset)
-{  
-    // make block aligned dims and offset
-    int modoffset = offset[0] % blocksize;
-    offset[0] -= modoffset;
-    dims[0] += modoffset;
-
-    modoffset = offset[1] % blocksize;
-    offset[1] -= modoffset;
-    dims[1] += modoffset;
-
-    modoffset = offset[2] % blocksize;
-    offset[2] -= modoffset;
-    dims[2] += modoffset;
-   
-    int modsize = dims[0] % blocksize;
-    if (modsize != 0) {
-        dims[0] += (blocksize - modsize);
-    } 
-
-    modsize = dims[1] % blocksize;
-    if (modsize != 0) {
-        dims[1] += (blocksize - modsize);
-    } 
-    
-    modsize = dims[2] % blocksize;
-    if (modsize != 0) {
-        dims[2] += (blocksize - modsize);
-    } 
-
-    vector<libdvid::DVIDCompressedBlock> blocks;
-    libdvid::BinaryDataPtr emptyptr(0);
-
-    DVIDCompressedBlock::CompressType ctype = DVIDCompressedBlock::lz4;
-    if (bytedepth == 1) {
-        ctype = DVIDCompressedBlock::jpeg;
-    }
-
-    for (int z = 0; z < (dims[2]/blocksize); ++z) {
-        for (int y = 0; y < (dims[1]/blocksize); ++y) {
-            for (int x = 0; x < (dims[0]/blocksize); ++x) {
-                vector<int> toffset;
-                toffset.push_back(offset[0]+x*blocksize);
-                toffset.push_back(offset[1]+y*blocksize);
-                toffset.push_back(offset[2]+z*blocksize);
-                libdvid::DVIDCompressedBlock cblock(emptyptr, toffset,
-                        blocksize, bytedepth, ctype);
-                blocks.push_back(cblock);
-            }
-        }
-    }
-
-    return blocks;
-}
-
 

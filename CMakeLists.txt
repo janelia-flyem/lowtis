@@ -36,7 +36,6 @@ if (LIBDVID_WRAP_PYTHON)
     set(boostpython_LIB ${Boost_LIBRARY_DIR_RELEASE}/libboost_python.${PLATFORM_DYLIB_EXTENSION})
 endif()
 
-
 FIND_PACKAGE(PNG REQUIRED)
 FIND_PACKAGE(JPEG REQUIRED)
 #FIND_LIBRARY(JPEG turbojpeg)
@@ -61,7 +60,7 @@ else()
 endif()
 
 #set (support_LIBS ${LIBDVIDCPP_LIBRARIES} ${JSON_LIBRARIES} ${boost_LIBS} ${PNG_LIBRARIES} ${CURL_LIBRARIES} ${JPEG_LIBRARIES} ${LZ4_LIBRARY})
-set (support_LIBS ${DVIDCPP_LIBRARY} ${boost_LIBS})
+set (support_LIBS ${DVIDCPP_LIBRARY} ${boost_LIBS} jsoncpp)
 
 include_directories (BEFORE ${CMAKE_SOURCE_DIR}/lowtis ${CMAKE_SOURCE_DIR})
 
@@ -74,7 +73,9 @@ endif()
 add_library (lowtis SHARED 
              src/BlockCache.cpp
              src/BlockFetchFactory.cpp
+             src/BlockFetch.cpp
              src/DVIDBlockFetch.cpp
+             src/GoogleBlockFetch.cpp
              src/lowtis.cpp)
 
 target_link_libraries (lowtis ${support_LIBS})

@@ -62,10 +62,23 @@ struct DVIDGrayblkConfig : public DVIDConfig {
     }
 };
 
+
 struct DVIDLabelblkConfig : public DVIDConfig {
     DVIDLabelblkConfig() : DVIDConfig(8) {}
 };
 
+
+/*!
+ * Configuration settings if using Google brainmaps back-end.
+*/
+struct GoogleGrayblkConfig : public DVIDConfig {
+    GoogleGrayblkConfig() : DVIDConfig(1)
+    {
+        refresh_rate = 0;
+        uncompressed_cache_size = 1000;
+    }
+    size_t isoblksize = 64;
+};
 
 }
 

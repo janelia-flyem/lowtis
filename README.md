@@ -88,6 +88,7 @@ highlights the main external functionality:
 ## TODO
 
 * Support callback for asynchronously updating caller
+* Support non-isotropic block sizes
 * Add unit and integration tests
 * Implement prefetching
 

@@ -38,6 +38,10 @@ struct LowtisConfig {
     //! the call non-blocking
     std::tuple<int, int> centercut;
     
+    //! enables prefetching for blocks
+    //! (no-op, server side, local depending on the fetcher)
+    bool enableprefetch = false;
+    
     // ?! add callback here
 
     virtual ~LowtisConfig() {}
@@ -52,7 +56,6 @@ struct DVIDConfig : public LowtisConfig {
     std::string dvid_server;
     std::string dvid_uuid;
     std::string datatypename;
-    bool enableprefetch = false;
     bool usehighiopquery = true;
 };
 

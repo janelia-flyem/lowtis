@@ -22,6 +22,16 @@ class BlockFetch {
             std::vector<libdvid::DVIDCompressedBlock>& blocks, int zoom) = 0;
 
     /*!
+     * Base class to do non-blocking prefetch on specified blocks.
+     * If a BlockFetch derived object does not support prefetching it will
+     * just be a no-op.
+    */
+    virtual void prefetch_blocks(std::vector<libdvid::DVIDCompressedBlock>& blocks, int zoom)
+    {
+        return;
+    }
+
+    /*!
      * Finds intersecting blocks.
      * TODO: supports only isotropic blocks now
      * \param dims size of subvolume requestsed

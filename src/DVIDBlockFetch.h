@@ -15,6 +15,13 @@ class DVIDBlockFetch : public BlockFetch {
     */
     DVIDBlockFetch(DVIDConfig& config);
 
+    /*!
+     * Non-blocking prefetch on specified blocks.  Only supported
+     * for uint8blk data and does server-side prefetching (data
+     * will not be local) and should be used generally when
+     * the underlying DB gives poor latency.
+    */
+    void prefetch_blocks(std::vector<libdvid::DVIDCompressedBlock>& blocks, int zoom);
 
     /*!
      * Base class virtual function for retrieving blocks specified.

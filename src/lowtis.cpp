@@ -173,7 +173,6 @@ void ImageService::_retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom, shared_ptr<BlockFetch> curr_fetcher)
 {
     auto initial_time = std::chrono::high_resolution_clock::now(); 
-
     // adjust offset for zoom
     for (int i = 0; i < zoom; i++) {
         offset[0] /= 2;
@@ -213,6 +212,7 @@ void ImageService::_retrieve_image(unsigned int width,
     // fetch data    
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
     
+    std::cout << "blocking fetch: " << missing_blocks.size() << std::endl;
     // call interface for blocks desired 
     curr_fetcher->extract_specific_blocks(missing_blocks, zoom);
     
@@ -299,7 +299,57 @@ void ImageService::_retrieve_image(unsigned int width,
             bytebuffer_temp += (width-(finishx-startx))*config.bytedepth;
         }
     }
-    
+   
+    // perform non-blocking prefetch
+    // depending on the block fetcher this will be either a non-opt,
+    // a remote cache, or a local cache
+    if (config.enableprefetch) {
+        // TODO: allow prefetch size to be configured
+        
+        // prefetch is determined as the relative zoom level
+        vector<unsigned int> dims;
+        vector <int> newoffset = offset;
+        // 10% increase to each side
+        int newwidth = width + width/5;
+        int newheight = height + height/5;
+       
+        // 10 planes above/below
+        int newdepth = 21;
+       
+        // adjust offset
+        newoffset[0] -= width/10; 
+        newoffset[1] -= height/10; 
+        newoffset[2] -= 10; 
+
+        dims.push_back(newwidth);
+        dims.push_back(newheight);
+        dims.push_back(newdepth);
+        vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, newoffset);
+
+        // check cache and save missing blocks
+        vector<DVIDCompressedBlock> missing_blocks;
+
+        // only prefetch missing blocks
+        for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
+            BlockCoords coords;
+            vector<int> toffset = iter->get_offset();
+            coords.x = toffset[0];
+            coords.y = toffset[1];
+            coords.z = toffset[2];
+            coords.zoom = zoom;
+
+            DVIDCompressedBlock block = *iter;
+            bool found = cache->retrieve_block(coords, block);
+            if (!found) {
+                missing_blocks.push_back(block);
+            }
+        }
+
+        // call non-blocking prefetcher (might no-op)
+        curr_fetcher->prefetch_blocks(missing_blocks, zoom);
+    }
+
+
     auto final_time = std::chrono::high_resolution_clock::now(); 
     //std::cout << "tile time: " << std::chrono::duration_cast<std::chrono::milliseconds>(final_time-initial_time).count() << " milliseconds" << std::endl;
 }

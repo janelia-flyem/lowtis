@@ -20,6 +20,33 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
         compression_type = DVIDCompressedBlock::lz4;
     }
 }
+    
+void DVIDBlockFetch::prefetch_blocks(vector<libdvid::DVIDCompressedBlock>& blocks, int zoom)
+{
+    // only support prefetch for grayscale blocks now
+    if (bytedepth != 1) {
+        return;
+    }
+
+    if (blocks.empty()) {
+        return;
+    }
+
+    vector<int> blockcoords;
+        for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
+            vector<int> offset = iter->get_offset();
+            size_t blocksize = iter->get_blocksize();
+            blockcoords.push_back(offset[0]/blocksize);
+            blockcoords.push_back(offset[1]/blocksize);
+            blockcoords.push_back(offset[2]/blocksize);
+        }
+        string dataname_temp = labeltypename;
+        if (zoom > 0) {
+            dataname_temp += "_" + std::to_string(zoom);
+        }
+
+        node_service.prefetch_specificblocks3D(dataname_temp, blockcoords);   
+}
 
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
         vector<unsigned int> dims, vector<int> offset, int zoom)
@@ -172,11 +199,5 @@ void DVIDBlockFetch::extract_specific_blocks(
             iter->set_data(dataiter->second.block.get_data());
         }
     }
-   
-    /* 
-    if (enableprefetch && (bytedepth == 1)) {
-        // ?! prefetch data
-    }
-    */
 }
 

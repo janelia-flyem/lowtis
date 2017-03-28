@@ -37,6 +37,7 @@ class DVIDBlockFetch : public BlockFetch {
 
 
     std::string labeltypename;
+    bool usehighiopquery;
     libdvid::DVIDNodeService node_service;
 };
 

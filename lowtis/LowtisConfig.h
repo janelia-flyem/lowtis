@@ -52,6 +52,8 @@ struct DVIDConfig : public LowtisConfig {
     std::string dvid_server;
     std::string dvid_uuid;
     std::string datatypename;
+    bool enableprefetch = false;
+    bool usehighiopquery = true;
 };
 
 struct DVIDGrayblkConfig : public DVIDConfig {

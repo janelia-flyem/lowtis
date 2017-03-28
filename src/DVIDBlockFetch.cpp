@@ -7,7 +7,7 @@ using namespace lowtis; using namespace libdvid;
 using std::string; using std::vector; using std::unordered_map;
 
 DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
-        labeltypename(config.datatypename),
+        labeltypename(config.datatypename), usehighiopquery(config.usehighiopquery),
         node_service(config.dvid_server, config.dvid_uuid, config.username, "lowtis") 
 {
     size_t isoblksize = node_service.get_blocksize(labeltypename); 
@@ -84,46 +84,66 @@ void DVIDBlockFetch::extract_specific_blocks(
     if (blocks.empty()) {
         return;
     }
+    vector<DVIDCompressedBlock> newblocks; 
 
-    // find bounding box for request 
-    int minx = INT_MAX; int miny = INT_MAX; int minz = INT_MAX;
-    int maxx = INT_MIN; int maxy = INT_MIN; int maxz = INT_MIN;
-   
-    for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
-        vector<int> offset = iter->get_offset();
-        size_t blocksize = iter->get_blocksize();
-        if (offset[0] < minx) {
-            minx = offset[0];
+    // only grayscale fetch works with specific block interface
+    if (!usehighiopquery || (bytedepth != 1) ) {
+        // find bounding box for request 
+        int minx = INT_MAX; int miny = INT_MAX; int minz = INT_MAX;
+        int maxx = INT_MIN; int maxy = INT_MIN; int maxz = INT_MIN;
+
+        for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
+            vector<int> offset = iter->get_offset();
+            size_t blocksize = iter->get_blocksize();
+            if (offset[0] < minx) {
+                minx = offset[0];
+            }
+            if (offset[1] < miny) {
+                miny = offset[1];
+            }
+            if (offset[2] < minz) {
+                minz = offset[2];
+            }
+            if (int(offset[0]+blocksize) > maxx) {
+                maxx = offset[0]+blocksize;
+            }
+            if (int(offset[1]+blocksize) > maxy) {
+                maxy = offset[1]+blocksize;
+            }
+            if (int(offset[2]+blocksize) > maxz) {
+                maxz = offset[2]+blocksize;
+            }
         }
-        if (offset[1] < miny) {
-            miny = offset[1];
+        vector<int> goffset;
+        goffset.push_back(minx);
+        goffset.push_back(miny);
+        goffset.push_back(minz);
+
+        vector<unsigned int> dims;
+        dims.push_back(maxx-minx);
+        dims.push_back(maxy-miny);
+        dims.push_back(maxz-minz);
+
+        // call main query function
+        // TODO: allow parallel requests to decompose an inefficiently packed bbox
+        newblocks = extract_blocks(dims, goffset, zoom); 
+    } else {
+        vector<int> blockcoords;
+        for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
+            vector<int> offset = iter->get_offset();
+            size_t blocksize = iter->get_blocksize();
+            blockcoords.push_back(offset[0]/blocksize);
+            blockcoords.push_back(offset[1]/blocksize);
+            blockcoords.push_back(offset[2]/blocksize);
         }
-        if (offset[2] < minz) {
-            minz = offset[2];
+        string dataname_temp = labeltypename;
+        if (zoom > 0) {
+            dataname_temp += "_" + std::to_string(zoom);
         }
-        if (int(offset[0]+blocksize) > maxx) {
-            maxx = offset[0]+blocksize;
-        }
-        if (int(offset[1]+blocksize) > maxy) {
-            maxy = offset[1]+blocksize;
-        }
-        if (int(offset[2]+blocksize) > maxz) {
-            maxz = offset[2]+blocksize;
-        }
+
+        node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
     }
-    vector<int> goffset;
-    goffset.push_back(minx);
-    goffset.push_back(miny);
-    goffset.push_back(minz);
 
-    vector<unsigned int> dims;
-    dims.push_back(maxx-minx);
-    dims.push_back(maxy-miny);
-    dims.push_back(maxz-minz);
-
-    // call main query function
-    // TODO: allow parallel requests to decompose an inefficiently packed bbox
-    vector<DVIDCompressedBlock> newblocks = extract_blocks(dims, goffset, zoom); 
 
     // find and set requested blocks
     unordered_map<BlockCoords, BlockData> cache;
@@ -152,5 +172,11 @@ void DVIDBlockFetch::extract_specific_blocks(
             iter->set_data(dataiter->second.block.get_data());
         }
     }
+   
+    /* 
+    if (enableprefetch && (bytedepth == 1)) {
+        // ?! prefetch data
+    }
+    */
 }
 

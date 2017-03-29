@@ -212,7 +212,6 @@ void ImageService::_retrieve_image(unsigned int width,
     // fetch data    
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
     
-    std::cout << "blocking fetch: " << missing_blocks.size() << std::endl;
     // call interface for blocks desired 
     curr_fetcher->extract_specific_blocks(missing_blocks, zoom);
     

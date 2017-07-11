@@ -25,10 +25,6 @@ requirements:
     - libdvid-cpp >=0.2
     - boost 1.63.0
 
-test:
-  source_files:
-    - build # Copy the entire build directory
-
 about:
   home: http://github.com/janelia-flyem/lowtis
   license: BSD (3-clause)

@@ -43,7 +43,10 @@ class DVIDBlockFetch : public BlockFetch {
             std::vector<unsigned int> dims, std::vector<int> offset, int zoom);
 
 
+    int maxlevel = 0;
+    bool usespecificblocks = false;
     std::string labeltypename;
+    std::string dvidtype;
     bool usehighiopquery;
     libdvid::DVIDNodeService node_service;
 };

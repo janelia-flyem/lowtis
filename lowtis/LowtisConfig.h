@@ -69,7 +69,9 @@ struct DVIDGrayblkConfig : public DVIDConfig {
 
 
 struct DVIDLabelblkConfig : public DVIDConfig {
-    DVIDLabelblkConfig() : DVIDConfig(8) {}
+    DVIDLabelblkConfig() : DVIDConfig(8) {
+        uncompressed_cache_size = 1000;
+    }
 };
 
 

@@ -39,6 +39,9 @@ void ImageService::flush_cache()
 {
     gmutex.lock();
     cache->flush();
+    if (uncompressed_cache) {
+        uncompressed_cache->flush();
+    }
     gmutex.unlock();
 }
 
@@ -150,7 +153,7 @@ void ImageService::retrieve_image(unsigned int width,
         // write center cut
         char* buffer2_iter = buffer2;
         for (int j = 0; j < cheight; ++j) {
-            char * bufferiter = buffer + ((j+(height-cheight)/2)*width*config.bytedepth) + (width-cwidth)/2;
+            char * bufferiter = buffer + ((j+(height-cheight)/2)*width*config.bytedepth) + (width-cwidth)/2*config.bytedepth;
             for (int i = 0; i < cwidth; ++i) {
                 for (int iter = 0; iter < config.bytedepth; iter++) {
                     *bufferiter = *buffer2_iter;

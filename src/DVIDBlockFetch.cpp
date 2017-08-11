@@ -2,6 +2,7 @@
 #include <libdvid/DVIDNodeService.h>
 #include <unordered_map>
 #include "BlockCache.h"
+#include <lowtis/lowtis.h>
 
 using namespace lowtis; using namespace libdvid;
 using std::string; using std::vector; using std::unordered_map;
@@ -13,10 +14,20 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
     size_t isoblksize = node_service.get_blocksize(labeltypename); 
     blocksize = std::make_tuple(isoblksize, isoblksize, isoblksize);
     bytedepth = config.bytedepth;
-    // only supports grayscale jpeg and lz4 labels
-    if (bytedepth == 1) {
+
+    Json::Value typeinfo = node_service.get_typeinfo(labeltypename);
+    
+    // grayscale and labelarray use specific blocks interface
+    // only supports grayscale jpeg and lz4/labelarray labels
+    dvidtype = typeinfo["Base"]["TypeName"].asString();
+    if (dvidtype == "labelarray") {
+        maxlevel = typeinfo["Extended"]["MaxDownresLevel"].asInt();
+        usespecificblocks = true;
+        compression_type = DVIDCompressedBlock::gzip_labelarray;
+    } else if (bytedepth == 1) {
+        usespecificblocks = true;
         compression_type = DVIDCompressedBlock::jpeg;
-    } else {
+    }  else {
         compression_type = DVIDCompressedBlock::lz4;
     }
 }
@@ -51,6 +62,9 @@ void DVIDBlockFetch::prefetch_blocks(vector<libdvid::DVIDCompressedBlock>& block
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
         vector<unsigned int> dims, vector<int> offset, int zoom)
 {
+    if (dvidtype == "labelarray") {
+        throw LowtisErr("labelarray only should use specific block interface");
+    }
     size_t isoblksize = std::get<0>(blocksize);
     // make block aligned dims and offset
     int modoffset = offset[0] % isoblksize;
@@ -88,6 +102,7 @@ vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
 
     string dataname_temp = labeltypename;
     if (zoom > 0) {
+        // do not use if explicit zoom levels supported
         dataname_temp += "_" + std::to_string(zoom);
     }
 
@@ -114,7 +129,8 @@ void DVIDBlockFetch::extract_specific_blocks(
     vector<DVIDCompressedBlock> newblocks; 
 
     // only grayscale fetch works with specific block interface
-    if (!usehighiopquery || (bytedepth != 1) ) {
+    if (!usehighiopquery || (!usespecificblocks)) {
+        // perform if labelblk datatype (>1 byte and lz4 compression)
         // find bounding box for request 
         int minx = INT_MAX; int miny = INT_MAX; int minz = INT_MAX;
         int maxx = INT_MIN; int maxy = INT_MIN; int maxz = INT_MIN;
@@ -164,13 +180,23 @@ void DVIDBlockFetch::extract_specific_blocks(
             blockcoords.push_back(offset[2]/blocksize);
         }
         string dataname_temp = labeltypename;
-        if (zoom > 0) {
+        if ((zoom > 0) && (dvidtype != "labelarray")) {
+            // do not use if explicit zoom levels supported
             dataname_temp += "_" + std::to_string(zoom);
         }
+        
+        // check against max scale level (easy to do for labelarray)
+        if ((zoom > maxlevel) && (dvidtype == "labelarray")) {
+            throw LowtisErr("Trying to request unknown scale level");
+        }
 
-        node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
+        if (dvidtype == "labelarray") {
+            // set scale for labelarray
+            node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom);
+        } else {
+            node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
+        }
     }
-
 
     // find and set requested blocks
     unordered_map<BlockCoords, BlockData> cache;

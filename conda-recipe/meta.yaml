@@ -18,12 +18,12 @@ build:
 requirements:
   build:
     - cmake
-    - libdvid-cpp >=0.2
-    - boost 1.63.0
+    - libdvid-cpp >=0.3
+    - boost 1.64.*
     
   run:
-    - libdvid-cpp >=0.2
-    - boost 1.63.0
+    - libdvid-cpp >=0.3
+    - boost 1.64.*
 
 about:
   home: http://github.com/janelia-flyem/lowtis

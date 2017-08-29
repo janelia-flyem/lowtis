@@ -12,7 +12,10 @@ set (CMAKE_CXX_LINK_FLAGS "-O3")
 set (CMAKE_CXX_FLAGS_RELEASE "-O3")
 set (CMAKE_CXX_FLAGS_DEBUG "-ggdb")
 set (CMAKE_DEBUG_POSTFIX "-g")
-add_definitions(-std=c++11)
+set (CMAKE_CXX_STANDARD 11) # the cmake way of saying '-std=c++11'
+if (APPLE)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
 
 
 set(BOOST_COMPONENTS thread system)

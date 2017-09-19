@@ -43,7 +43,7 @@ source ${CONDA_ROOT}/bin/activate root
 ```
 Once conda is in your system path, call the following to install neuroproof:
 
-    % conda create -n CHOOSE_ENV_NAME -c flyem lowtis
+    % conda create -n CHOOSE_ENV_NAME -c flyem-forge lowtis
 
 Conda allows builder to create multiple environments.  To use the library,
 set your library path to PREFIX/CHOOSE_ENV_NAME/lib.

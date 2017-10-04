@@ -29,16 +29,31 @@ class ImageService {
     ImageService(LowtisConfig& config_);
 
     /*!
-     * Retrieves image data.  This function is blocking and will
-     * return some data.  Depending on the configuration, the
-     * callback can be called asynchronously to update the view.
+     * Retrieves image data for a fixed orientation (determined by the config file
+     * if supported by lowtis DB driver .  This function is blocking and will
+     * return data in provided buffer.
      * \param viewport size of window
      * \param offset offset of image
      * \param buffer preallocated image buffer (size: height*width*bytedepth)
-     * \param zoom zoom level (0 is full zoom)
-    :*/ 
+     * \param zoom power of two zoom level (0 is full zoom)
+    */ 
     void retrieve_image(unsigned int width,
         unsigned int height, std::vector<int> offset, char* buffer, int zoom=0, bool centercut=false);
+
+    /*!
+     * Retrieves image data.  This function is blocking and will
+     * return some data. 
+     * Note: dim1, dim2 must be orthogonal.
+     * \param viewport size of window
+     * \param centerloc location of image center
+     * \param dim1vec gives dim1 orientation vector 
+     * \param dim2vec gives dim2 orientation vector 
+     * \param buffer preallocated image buffer (size: height*width*bytedepth)
+     * \param zoom power of two zoom level (0 is full zoom)
+    */ 
+    void retrieve_arbimage(unsigned int width,
+        unsigned int height, std::vector<int> centerloc, std::vector<double> dim1vec,
+        std::vector<double> dim2vec, char* buffer, int zoom=0, bool centercut=false);
 
     /*!
      * Pause future requests and asynchronous calls.
@@ -52,8 +67,15 @@ class ImageService {
     void flush_cache();
 
   private:
+    /*!
+     * Retrieve image plane.  If no plane is defined, it just
+     * defaults to the Z plane.
+    */
+    void _retrieve_image_fovea(unsigned int width,
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom, bool centercut, std::vector<double> dim1step, std::vector<double> dim2step);
+
     void _retrieve_image(unsigned int width,
-        unsigned int height, std::vector<int> offset, char* buffer, int zoom, std::shared_ptr<BlockFetch> curr_fetcher);
+        unsigned int height, std::vector<int> offset, char* buffer, int zoom, std::shared_ptr<BlockFetch> curr_fetcher, std::vector<double> dim1step, std::vector<double> dim2step);
     
     //! interface to fetch block data
     std::shared_ptr<BlockFetch> fetcher;

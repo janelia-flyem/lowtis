@@ -3,8 +3,10 @@
 #include "BlockFetchFactory.h"
 #include "BlockCache.h"
 #include <boost/thread/thread.hpp>
+#include <thread>
 #include <time.h>
 #include <chrono>
+#include <cmath>
 
 using namespace lowtis;
 using namespace libdvid;
@@ -12,6 +14,9 @@ using std::vector;
 using std::shared_ptr;
 using std::ostream;
 using std::get;
+using std::sqrt;
+using std::round;
+using std::unordered_map;
 
 ImageService::ImageService(LowtisConfig& config_) : config(config_)
 {
@@ -81,12 +86,83 @@ void decompress_block(vector<DVIDCompressedBlock>* blocks, int id, int num_threa
     }
 }
 
+// Update currloc based on vector step (just rounds to nearest integer location)
+inline void increment_vector(vector<int>& currloc, vector<double>& dim1unitvec,
+       vector<double>& dim2unitvec, vector<double>& dim3unitvec,
+       int dim1incr, int dim2incr, int dim3incr)
+{
+    for (size_t i = 0; i < currloc.size(); ++i) {
+        currloc[i] = round(currloc[i] + dim1unitvec[i]*dim1incr + dim2unitvec[i]*dim2incr + dim3unitvec[i]*dim3incr);
+    }
+}
+
+
+void ImageService::retrieve_arbimage(unsigned int width, unsigned int height,
+        vector<int> centerloc, vector<double> dim1vec, vector<double> dim2vec, char* buffer, int zoom,
+        bool centercut)
+{
+    // check if roughly orthogonal
+    assert(centerloc.size() == 3);
+    assert(dim1vec.size() == 3);
+    assert(dim2vec.size() == 3);
+    double dotprod = 0;
+    for (int i = 0; i < 3; ++i) {
+        //dotprod += ((dim1vec[i] - centerloc[i])*(dim2vec[i] - centerloc[i]));
+        dotprod += ((dim1vec[i])*(dim2vec[i]));
+    }
+    assert(dotprod > -0.0001 && dotprod < 0.0001);
+
+    // find true width for zoom 
+    for (int i = 0; i < zoom; i++) {
+        width *= 2;
+        height *= 2;
+    }
+    
+    // calculate unit vector 
+    vector<double> dim1step;
+    vector<double> dim2step;
+    double dim1norm = 0;
+    double dim2norm = 0;
+    for (int i = 0; i < 3; ++i) {
+        //double val = dim1vec[i]-centerloc[i];
+        double val = dim1vec[i];
+        dim1norm += val*val;
+        dim1step.push_back(val);
+        
+        //val = dim2vec[i]-centerloc[i];
+        val = dim2vec[i];
+        dim2norm += val*val;
+        dim2step.push_back(val);
+    }
+    dim1norm = sqrt(dim1norm);
+    dim2norm = sqrt(dim2norm);
+    for (int i = 0; i < 3; ++i) {
+        dim1step[i] /= dim1norm;
+        dim2step[i] /= dim2norm;
+    }
+
+    // calculate offset in global coordinates along dim1 and dim2
+    vector<int> offset = centerloc;
+    vector<double> dummyvec(3,0);
+
+    increment_vector(offset, dim1step, dim2step, dummyvec, -1*int(width)/2, -1*int(height)/2, 0);
+
+    _retrieve_image_fovea(width, height, offset, buffer, zoom, centercut, dim1step, dim2step); 
+}
+
 void ImageService::retrieve_image(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom, bool centercut)
 {
+    vector<double> dim1step, dim2step;
+    _retrieve_image_fovea(width, height, offset, buffer, zoom, centercut, dim1step, dim2step); 
+}
+
+void ImageService::_retrieve_image_fovea(unsigned int width,
+        unsigned int height, vector<int> offset, char* buffer, int zoom, bool centercut, vector<double> dim1step, vector<double> dim2step)
+{
     if (!centercut) {
         gmutex.lock();
-        _retrieve_image(width, height, offset, buffer, zoom, fetcher);
+        _retrieve_image(width, height, offset, buffer, zoom, fetcher, dim1step, dim2step);
         gmutex.unlock();
     } else {
         // call as boost threads and join
@@ -109,14 +185,20 @@ void ImageService::retrieve_image(unsigned int width,
             offset0 *= 2;
             offset1 *= 2;
         }
-        tempoffset[0] += offset0;
-        tempoffset[1] += offset1;
+
+        if (!dim1step.empty()) {
+            vector<double> dummyvec(3,0);
+            increment_vector(tempoffset, dim1step, dim2step, dummyvec, offset0, offset1, 0); 
+        } else {
+            tempoffset[0] += offset0;
+            tempoffset[1] += offset1;
+        }
 
         gmutex.lock();
-        boost::thread* t1 = new boost::thread(&ImageService::_retrieve_image, this, cwidth, cheight, tempoffset, buffer2, zoom, fetcher);
+        boost::thread* t1 = new boost::thread(&ImageService::_retrieve_image, this, cwidth, cheight, tempoffset, buffer2, zoom, fetcher, dim1step, dim2step);
         threads.add_thread(t1);
 
-        boost::thread* t2 = new boost::thread(&ImageService::_retrieve_image, this, width/2, height/2, offset, buffer3, zoom+1, fetcher2);
+        boost::thread* t2 = new boost::thread(&ImageService::_retrieve_image, this, width/2, height/2, offset, buffer3, zoom+1, fetcher2, dim1step, dim2step);
         //_retrieve_image(width/2, height/2, offset, buffer3, zoom+1, fetcher2);
         threads.add_thread(t2);
        
@@ -164,16 +246,14 @@ void ImageService::retrieve_image(unsigned int width,
             }
         }
 
-
         // TODO: keep a memory buffer to avoid reallocation (already know centercut size)
         delete []buffer2;
         delete []buffer3;
-
     }
 }
 
 void ImageService::_retrieve_image(unsigned int width,
-        unsigned int height, vector<int> offset, char* buffer, int zoom, shared_ptr<BlockFetch> curr_fetcher)
+        unsigned int height, vector<int> offset, char* buffer, int zoom, shared_ptr<BlockFetch> curr_fetcher, vector<double> dim1step, vector<double> dim2step)
 {
     auto initial_time = std::chrono::high_resolution_clock::now(); 
     // adjust offset for zoom
@@ -189,8 +269,9 @@ void ImageService::_retrieve_image(unsigned int width,
     dims.push_back(width);
     dims.push_back(height);
     dims.push_back(1);
-    vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, offset);
-
+    
+    vector<double> dim3step(3, 0); // only will work on a dim1, dim2 
+    vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, offset, dim1step, dim2step, dim3step);
     // check cache and save missing blocks
     vector<DVIDCompressedBlock> current_blocks;
     vector<DVIDCompressedBlock> missing_blocks;
@@ -234,7 +315,12 @@ void ImageService::_retrieve_image(unsigned int width,
         auto ct1 = std::chrono::high_resolution_clock::now(); 
 
         boost::thread_group threads; // destructor auto deletes threads
-        int num_threads = 8; // ?! do dynamically
+        int num_threads = std::thread::hardware_concurrency();
+        if (num_threads == 0) {
+            // just default to something if hardware concurrency not supported
+            num_threads = 8;
+        }
+        
 
         vector<boost::thread*> curr_threads;  
         for (int i = 0; i < num_threads; ++i) {
@@ -247,58 +333,117 @@ void ImageService::_retrieve_image(unsigned int width,
         auto ct2 = std::chrono::high_resolution_clock::now(); 
         //std::cout << "decompress: " << std::chrono::duration_cast<std::chrono::milliseconds>(ct2-ct1).count() << " milliseconds" << std::endl;
     }
-    // populate image from blocks and return data
-    for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
-        bool emptyblock = false;
-        if (!(iter->get_data())) {
-            emptyblock = true;
+    
+    // TODO: better arbitrary cut interpolation (ideally would also change intersection algorithm)
+    if (!dim1step.empty()) {
+        // create lookup map for blocks
+        unordered_map<BlockCoords, DVIDCompressedBlock> mappedblocks;
+        for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
+            vector<int> toffset = iter->get_offset();
+            BlockCoords coords;
+            coords.x = toffset[0];
+            coords.y = toffset[1];
+            coords.z = toffset[2];
+            mappedblocks[coords] = *iter;
         }
 
-        size_t blocksize = iter->get_blocksize();
+        // !! assume uniform blocks
+        size_t isoblksize = current_blocks[0].get_blocksize();
 
-        const unsigned char* raw_data = 0;
+        vector<double> toffset(3);
+        toffset[0] = offset[0];
+        toffset[1] = offset[1];
+        toffset[2] = offset[2];
+        for (int dim2 = 0; dim2 < height; ++dim2) {
+            for (int dim1 = 0; dim1 < width; ++dim1) {
+                // grab block address
+                BlockCoords coords;
+                coords.x = round(toffset[0]) - (int(round(toffset[0])) % isoblksize);
+                coords.y = round(toffset[1]) - (int(round(toffset[1])) % isoblksize);
+                coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
+                       
+                auto raw_data = mappedblocks[coords].get_uncompressed_data()->get_raw();
+            
+                // find offset within block
+                int xshift = int(round(toffset[0])) % isoblksize;
+                int yshift = int(round(toffset[1])) % isoblksize;
+                int zshift = int(round(toffset[2])) % isoblksize;
+                raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
 
-        BinaryDataPtr raw_data_ptr;
-        if (!emptyblock) {
-            raw_data_ptr = iter->get_uncompressed_data();
-            raw_data = raw_data_ptr->get_raw();
-        }
-
-        // extract common dim3 offset (will refer to as 'z')
-        vector<int> toffset = iter->get_offset();
-        int zoff = offset[2] - toffset[2];
-
-        // find intersection between block and buffer
-        int startx = std::max(offset[0], toffset[0]);
-        int finishx = std::min(offset[0]+int(width), toffset[0]+int(blocksize));
-        int starty = std::max(offset[1], toffset[1]);
-        int finishy = std::min(offset[1]+int(height), toffset[1]+int(blocksize));
-
-        unsigned long long iterpos = zoff * blocksize * blocksize * config.bytedepth;
-
-        // point to correct plane
-        raw_data += iterpos;
-        
-        // point to correct y,x
-        raw_data += (((starty-toffset[1])*blocksize*config.bytedepth) + 
-                ((startx-toffset[0])*config.bytedepth)); 
-        char* bytebuffer_temp = buffer + ((starty-offset[1])*width*config.bytedepth) +
-           ((startx-offset[0])*config.bytedepth); 
-
-        for (int ypos = starty; ypos < finishy; ++ypos) {
-            for (int xpos = startx; xpos < finishx; ++xpos) {
                 for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
-                    if (!emptyblock) {
-                        *bytebuffer_temp = *raw_data;
-                    } else {
-                        *bytebuffer_temp = config.emptyval;
-                    }
+                    *buffer = *raw_data;
+                    
+                    // write buffer in order
                     ++raw_data;
-                    ++bytebuffer_temp;
-                } 
+                    ++buffer;
+                }
+                
+                toffset[0] += dim1step[0];
+                toffset[1] += dim1step[1];
+                toffset[2] += dim1step[2];
             }
-            raw_data += (blocksize-(finishx-startx))*config.bytedepth;
-            bytebuffer_temp += (width-(finishx-startx))*config.bytedepth;
+            toffset[0] -= (width*dim1step[0]);
+            toffset[1] -= (width*dim1step[1]);
+            toffset[2] -= (width*dim1step[2]);
+
+            toffset[0] += (dim2step[0]);
+            toffset[1] += (dim2step[1]);
+            toffset[2] += (dim2step[2]);
+        }
+    } else {
+        // populate image from blocks and return data
+        for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
+            bool emptyblock = false;
+            if (!(iter->get_data())) {
+                emptyblock = true;
+            }
+
+            size_t blocksize = iter->get_blocksize();
+
+            const unsigned char* raw_data = 0;
+
+            BinaryDataPtr raw_data_ptr;
+            if (!emptyblock) {
+                raw_data_ptr = iter->get_uncompressed_data();
+                raw_data = raw_data_ptr->get_raw();
+            }
+
+            // extract common dim3 offset (will refer to as 'z')
+            vector<int> toffset = iter->get_offset();
+            int zoff = offset[2] - toffset[2];
+
+            // find intersection between block and buffer
+            int startx = std::max(offset[0], toffset[0]);
+            int finishx = std::min(offset[0]+int(width), toffset[0]+int(blocksize));
+            int starty = std::max(offset[1], toffset[1]);
+            int finishy = std::min(offset[1]+int(height), toffset[1]+int(blocksize));
+
+            unsigned long long iterpos = zoff * blocksize * blocksize * config.bytedepth;
+
+            // point to correct plane
+            raw_data += iterpos;
+
+            // point to correct y,x
+            raw_data += (((starty-toffset[1])*blocksize*config.bytedepth) + 
+                    ((startx-toffset[0])*config.bytedepth)); 
+            char* bytebuffer_temp = buffer + ((starty-offset[1])*width*config.bytedepth) +
+                ((startx-offset[0])*config.bytedepth); 
+
+            for (int ypos = starty; ypos < finishy; ++ypos) {
+                for (int xpos = startx; xpos < finishx; ++xpos) {
+                    for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
+                        if (!emptyblock) {
+                            *bytebuffer_temp = *raw_data;
+                        } else {
+                            *bytebuffer_temp = config.emptyval;
+                        }
+                        ++raw_data;
+                        ++bytebuffer_temp;
+                    } 
+                }
+                raw_data += (blocksize-(finishx-startx))*config.bytedepth;
+                bytebuffer_temp += (width-(finishx-startx))*config.bytedepth;
+            }
         }
     }
    
@@ -317,16 +462,29 @@ void ImageService::_retrieve_image(unsigned int width,
        
         // 10 planes above/below
         int newdepth = 21;
+      
+        vector<double> dim3step;
        
-        // adjust offset
-        newoffset[0] -= width/10; 
-        newoffset[1] -= height/10; 
-        newoffset[2] -= 10; 
+        if (!dim1step.empty()) {
+            // compute dim3step by cross product
+            dim3step.push_back(dim1step[1]*dim2step[2]+dim1step[2]*dim2step[1]); 
+            dim3step.push_back(dim1step[2]*dim2step[0]+dim1step[0]*dim2step[2]);
+            dim3step.push_back(dim1step[0]*dim2step[1]+dim1step[1]*dim2step[0]); 
+             
+            increment_vector(newoffset, dim1step, dim2step, dim3step, -width/10, -height/10, -10); 
+        } else {
+            // adjust offset
+            newoffset[0] -= width/10; 
+            newoffset[1] -= height/10; 
+            newoffset[2] -= 10; 
+        }
 
+        
         dims.push_back(newwidth);
         dims.push_back(newheight);
         dims.push_back(newdepth);
-        vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, newoffset);
+
+        vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, newoffset, dim1step, dim2step, dim3step);
 
         // check cache and save missing blocks
         vector<DVIDCompressedBlock> missing_blocks;

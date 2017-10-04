@@ -337,14 +337,14 @@ void ImageService::_retrieve_image(unsigned int width,
     // TODO: better arbitrary cut interpolation (ideally would also change intersection algorithm)
     if (!dim1step.empty()) {
         // create lookup map for blocks
-        unordered_map<BlockCoords, DVIDCompressedBlock> mappedblocks;
+        unordered_map<BlockCoords, const unsigned char* > mappedblocks;
         for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
             vector<int> toffset = iter->get_offset();
             BlockCoords coords;
             coords.x = toffset[0];
             coords.y = toffset[1];
             coords.z = toffset[2];
-            mappedblocks[coords] = *iter;
+            mappedblocks[coords] = iter->get_uncompressed_data()->get_raw();
         }
 
         // !! assume uniform blocks
@@ -361,8 +361,8 @@ void ImageService::_retrieve_image(unsigned int width,
                 coords.x = round(toffset[0]) - (int(round(toffset[0])) % isoblksize);
                 coords.y = round(toffset[1]) - (int(round(toffset[1])) % isoblksize);
                 coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
-                       
-                auto raw_data = mappedblocks[coords].get_uncompressed_data()->get_raw();
+                      
+                auto raw_data = mappedblocks[coords];
             
                 // find offset within block
                 int xshift = int(round(toffset[0])) % isoblksize;
@@ -377,7 +377,7 @@ void ImageService::_retrieve_image(unsigned int width,
                     ++raw_data;
                     ++buffer;
                 }
-                
+
                 toffset[0] += dim1step[0];
                 toffset[1] += dim1step[1];
                 toffset[2] += dim1step[2];

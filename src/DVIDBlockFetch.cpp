@@ -26,7 +26,12 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
         compression_type = DVIDCompressedBlock::gzip_labelarray;
     } else if (bytedepth == 1) {
         usespecificblocks = true;
-        compression_type = DVIDCompressedBlock::jpeg;
+        string compression_string = typeinfo["Base"]["Compression"].asString();
+        if (compression_string.find("LZ4") == 0) {
+            compression_type = DVIDCompressedBlock::uncompressed;
+        } else {
+            compression_type = DVIDCompressedBlock::jpeg;
+        }
     }  else {
         compression_type = DVIDCompressedBlock::lz4;
     }
@@ -194,7 +199,13 @@ void DVIDBlockFetch::extract_specific_blocks(
             // set scale for labelarray
             node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom);
         } else {
-            node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
+            if (compression_type == DVIDCompressedBlock::uncompressed) {
+                std::cout << "blah0" << std::endl;
+                node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, 0, true);
+                std::cout << "blah1" << std::endl;
+            } else {
+                node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
+            }
         }
     }
 

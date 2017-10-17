@@ -200,9 +200,9 @@ void DVIDBlockFetch::extract_specific_blocks(
             node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom);
         } else {
             if (compression_type == DVIDCompressedBlock::uncompressed) {
-                std::cout << "blah0" << std::endl;
+                //std::cout << "blah0" << std::endl;
                 node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, 0, true);
-                std::cout << "blah1" << std::endl;
+                //std::cout << "blah1" << std::endl;
             } else {
                 node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks);
             }

@@ -344,11 +344,27 @@ void ImageService::_retrieve_image(unsigned int width,
             coords.x = toffset[0];
             coords.y = toffset[1];
             coords.z = toffset[2];
-            mappedblocks[coords] = iter->get_uncompressed_data()->get_raw();
+            if (iter->get_data()) {
+                mappedblocks[coords] = iter->get_uncompressed_data()->get_raw();
+            } else {
+                mappedblocks[coords] = 0;
+            }
         }
 
         // !! assume uniform blocks
         size_t isoblksize = current_blocks[0].get_blocksize();
+       
+        // set default value for image 
+        auto bufferset = buffer;
+        for (int dim2 = 0; dim2 < height; ++dim2) {
+            for (int dim1 = 0; dim1 < width; ++dim1) {
+                for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
+                    // TODO: properly set for entire bytedepth
+                    *bufferset = config.emptyval; 
+                    ++bufferset;
+                }
+            }
+        }
 
         vector<double> toffset(3);
         toffset[0] = offset[0];
@@ -363,19 +379,22 @@ void ImageService::_retrieve_image(unsigned int width,
                 coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
                       
                 auto raw_data = mappedblocks[coords];
-            
-                // find offset within block
-                int xshift = int(round(toffset[0])) % isoblksize;
-                int yshift = int(round(toffset[1])) % isoblksize;
-                int zshift = int(round(toffset[2])) % isoblksize;
-                raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
+                
+                // don't write data if empty
+                if (raw_data) {
+                    // find offset within block
+                    int xshift = int(round(toffset[0])) % isoblksize;
+                    int yshift = int(round(toffset[1])) % isoblksize;
+                    int zshift = int(round(toffset[2])) % isoblksize;
+                    raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
 
-                for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
-                    *buffer = *raw_data;
-                    
-                    // write buffer in order
-                    ++raw_data;
-                    ++buffer;
+                    for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
+                        *buffer = *raw_data;
+
+                        // write buffer in order
+                        ++raw_data;
+                        ++buffer;
+                    }
                 }
 
                 toffset[0] += dim1step[0];
@@ -435,6 +454,7 @@ void ImageService::_retrieve_image(unsigned int width,
                         if (!emptyblock) {
                             *bytebuffer_temp = *raw_data;
                         } else {
+                            // TODO: properly set for entire bytedepth
                             *bytebuffer_temp = config.emptyval;
                         }
                         ++raw_data;

@@ -7,7 +7,7 @@
 
 namespace lowtis {
 
-class LowtisConfig;    
+struct LowtisConfig;
 typedef std::shared_ptr<LowtisConfig> LowtisConfigPtr;
 
 /*!

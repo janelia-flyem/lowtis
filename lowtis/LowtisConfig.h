@@ -3,10 +3,11 @@
 
 #include <string>
 #include <memory>
+#include <tuple>
 
 namespace lowtis {
 
-class LowtisConfig;    
+struct LowtisConfig;
 typedef std::shared_ptr<LowtisConfig> LowtisConfigPtr;
 
 /*!

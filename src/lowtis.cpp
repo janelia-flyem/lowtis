@@ -279,7 +279,7 @@ void ImageService::_retrieve_image(unsigned int width,
 
     for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
         BlockCoords coords;
-        vector<int> toffset = iter->get_offset();
+        const vector<int>& toffset = iter->get_offset();
         coords.x = toffset[0];
         coords.y = toffset[1];
         coords.z = toffset[2];
@@ -344,7 +344,7 @@ void ImageService::_retrieve_image(unsigned int width,
         // create lookup map for blocks
         unordered_map<BlockCoords, const unsigned char* > mappedblocks;
         for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
-            vector<int> toffset = iter->get_offset();
+            const vector<int>& toffset = iter->get_offset();
             BlockCoords coords;
             coords.x = toffset[0];
             coords.y = toffset[1];

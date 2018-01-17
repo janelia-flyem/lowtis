@@ -28,9 +28,10 @@ vector<libdvid::DVIDCompressedBlock> BlockFetch::intersecting_blocks(
         
         BlockCoords savedcoords;
         savedcoords.x = INT_MAX;
+        vector<double> toffset(3, 0);
+        vector<int> toffset2(3, 0);
         for (int z = 0; z < dims[2]; ++z) {
             // set offset
-            vector<double> toffset(3, 0);
             for (size_t i = 0; i < toffset.size(); ++i) {
                 toffset[i] = offset[i] +  dim3step[i]*z;
             }
@@ -48,7 +49,6 @@ vector<libdvid::DVIDCompressedBlock> BlockFetch::intersecting_blocks(
                     if (!(savedcoords == coords)) {
                         if (foundblocks.find(coords) == foundblocks.end()) {
                             foundblocks.insert(coords);
-                            vector<int> toffset2(3, 0);
                             toffset2[0] = coords.x;
                             toffset2[1] = coords.y;
                             toffset2[2] = coords.z;
@@ -102,13 +102,13 @@ vector<libdvid::DVIDCompressedBlock> BlockFetch::intersecting_blocks(
             dims[2] += (isoblksize - modsize);
         } 
 
+        vector<int> toffset(3, 0);
         for (int z = 0; z < (dims[2]/isoblksize); ++z) {
             for (int y = 0; y < (dims[1]/isoblksize); ++y) {
                 for (int x = 0; x < (dims[0]/isoblksize); ++x) {
-                    vector<int> toffset;
-                    toffset.push_back(offset[0]+x*isoblksize);
-                    toffset.push_back(offset[1]+y*isoblksize);
-                    toffset.push_back(offset[2]+z*isoblksize);
+                    toffset[0] = offset[0] + x * isoblksize;
+                    toffset[1] = offset[1] + y * isoblksize;
+                    toffset[2] = offset[2] + z * isoblksize;
                     libdvid::DVIDCompressedBlock cblock(emptyptr, toffset,
                             isoblksize, bytedepth, compression_type);
                     blocks.push_back(cblock);

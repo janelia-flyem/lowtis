@@ -55,8 +55,8 @@ vector<libdvid::DVIDCompressedBlock> BlockFetch::intersecting_blocks(
 
                     // if same as previous block, do not even lookup 
                     if (!(savedcoords == coords)) {
-                        if (foundblocks.find(coords) == foundblocks.end()) {
-                            foundblocks.insert(coords);
+                        std::pair<unordered_set<BlockCoords>::iterator, bool> result = foundblocks.insert(coords);
+                        if (result.second) {
                             toffset2[0] = coords.x;
                             toffset2[1] = coords.y;
                             toffset2[2] = coords.z;

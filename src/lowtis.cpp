@@ -295,7 +295,7 @@ void ImageService::_retrieve_image(unsigned int width,
     }
 
     auto end_cache_time = std::chrono::high_resolution_clock::now();
-    std::cout << "cache time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_cache_time - start_cache_time).count() << " milliseconds" << std::endl;
+    //std::cout << "cache time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_cache_time - start_cache_time).count() << " milliseconds" << std::endl;
 
     // fetch data    
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 

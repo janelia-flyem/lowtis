@@ -269,7 +269,8 @@ void ImageService::_retrieve_image(unsigned int width,
     dims.push_back(width);
     dims.push_back(height);
     dims.push_back(1);
-    
+
+    auto start_cache_time = std::chrono::high_resolution_clock::now();
     vector<double> dim3step(3, 0); // only will work on a dim1, dim2 
     vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, offset, dim1step, dim2step, dim3step);
     // check cache and save missing blocks
@@ -278,7 +279,7 @@ void ImageService::_retrieve_image(unsigned int width,
 
     for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
         BlockCoords coords;
-        vector<int> toffset = iter->get_offset();
+        const vector<int>& toffset = iter->get_offset();
         coords.x = toffset[0];
         coords.y = toffset[1];
         coords.z = toffset[2];
@@ -292,6 +293,9 @@ void ImageService::_retrieve_image(unsigned int width,
             missing_blocks.push_back(block);
         }
     }
+
+    auto end_cache_time = std::chrono::high_resolution_clock::now();
+    //std::cout << "cache time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_cache_time - start_cache_time).count() << " milliseconds" << std::endl;
 
     // fetch data    
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
@@ -335,11 +339,12 @@ void ImageService::_retrieve_image(unsigned int width,
     }
     
     // TODO: better arbitrary cut interpolation (ideally would also change intersection algorithm)
+    auto start_compute_intersection_time = std::chrono::high_resolution_clock::now();
     if (!dim1step.empty()) {
         // create lookup map for blocks
         unordered_map<BlockCoords, const unsigned char* > mappedblocks;
         for (auto iter = current_blocks.begin(); iter != current_blocks.end(); ++iter) {
-            vector<int> toffset = iter->get_offset();
+            const vector<int>& toffset = iter->get_offset();
             BlockCoords coords;
             coords.x = toffset[0];
             coords.y = toffset[1];
@@ -370,29 +375,44 @@ void ImageService::_retrieve_image(unsigned int width,
         toffset[0] = offset[0];
         toffset[1] = offset[1];
         toffset[2] = offset[2];
+
+        const unsigned char* raw_data = nullptr;
+        BlockCoords pre_coords;
+        pre_coords.x = INT32_MIN;
+        pre_coords.y = INT32_MIN;
+        pre_coords.z = INT32_MIN;
+
         for (int dim2 = 0; dim2 < height; ++dim2) {
             for (int dim1 = 0; dim1 < width; ++dim1) {
                 // grab block address
+                int x = static_cast<int>(toffset[0] + 0.5);
+                int y = static_cast<int>(toffset[1] + 0.5);
+                int z = static_cast<int>(toffset[2] + 0.5);
+                // find offset within block
+                int xshift = x % isoblksize;
+                int yshift = y % isoblksize;
+                int zshift = z % isoblksize;
+
                 BlockCoords coords;
-                coords.x = round(toffset[0]) - (int(round(toffset[0])) % isoblksize);
-                coords.y = round(toffset[1]) - (int(round(toffset[1])) % isoblksize);
-                coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
-                      
-                auto raw_data = mappedblocks[coords];
-                
+                coords.x = x - xshift;
+                coords.y = y - yshift;
+                coords.z = z - zshift;
+
+                if (!(pre_coords == coords))
+                {
+                    raw_data = mappedblocks[coords];
+                    pre_coords = coords;
+                }
+
                 // don't write data if empty
                 if (raw_data) {
-                    // find offset within block
-                    int xshift = int(round(toffset[0])) % isoblksize;
-                    int yshift = int(round(toffset[1])) % isoblksize;
-                    int zshift = int(round(toffset[2])) % isoblksize;
-                    raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
+                    const unsigned char*  raw_data_local = raw_data +(zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
 
                     for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
-                        *buffer = *raw_data;
+                        *buffer = *raw_data_local;
 
                         // write buffer in order
-                        ++raw_data;
+                        ++raw_data_local;
                         ++buffer;
                     }
                 }
@@ -466,6 +486,8 @@ void ImageService::_retrieve_image(unsigned int width,
             }
         }
     }
+    auto end_compute_intersection_time = std::chrono::high_resolution_clock::now();
+    //std::cout << "compute intersection time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_compute_intersection_time - start_compute_intersection_time).count() << " milliseconds" << std::endl;
    
     // perform non-blocking prefetch
     // depending on the block fetcher this will be either a non-opt,

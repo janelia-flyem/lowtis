@@ -269,7 +269,8 @@ void ImageService::_retrieve_image(unsigned int width,
     dims.push_back(width);
     dims.push_back(height);
     dims.push_back(1);
-    
+
+    auto start_cache_time = std::chrono::high_resolution_clock::now();
     vector<double> dim3step(3, 0); // only will work on a dim1, dim2 
     vector<DVIDCompressedBlock> blocks = curr_fetcher->intersecting_blocks(dims, offset, dim1step, dim2step, dim3step);
     // check cache and save missing blocks
@@ -292,6 +293,9 @@ void ImageService::_retrieve_image(unsigned int width,
             missing_blocks.push_back(block);
         }
     }
+
+    auto end_cache_time = std::chrono::high_resolution_clock::now();
+    std::cout << "cache time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_cache_time - start_cache_time).count() << " milliseconds" << std::endl;
 
     // fetch data    
     auto start_fetch_time = std::chrono::high_resolution_clock::now(); 
@@ -335,6 +339,7 @@ void ImageService::_retrieve_image(unsigned int width,
     }
     
     // TODO: better arbitrary cut interpolation (ideally would also change intersection algorithm)
+    auto start_compute_intersection_time = std::chrono::high_resolution_clock::now();
     if (!dim1step.empty()) {
         // create lookup map for blocks
         unordered_map<BlockCoords, const unsigned char* > mappedblocks;
@@ -466,6 +471,8 @@ void ImageService::_retrieve_image(unsigned int width,
             }
         }
     }
+    auto end_compute_intersection_time = std::chrono::high_resolution_clock::now();
+    //std::cout << "compute intersection time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_compute_intersection_time - start_compute_intersection_time).count() << " milliseconds" << std::endl;
    
     // perform non-blocking prefetch
     // depending on the block fetcher this will be either a non-opt,

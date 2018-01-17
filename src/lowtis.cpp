@@ -375,6 +375,13 @@ void ImageService::_retrieve_image(unsigned int width,
         toffset[0] = offset[0];
         toffset[1] = offset[1];
         toffset[2] = offset[2];
+
+        const unsigned char* raw_data = nullptr;
+        BlockCoords pre_coords;
+        pre_coords.x = INT32_MIN;
+        pre_coords.y = INT32_MIN;
+        pre_coords.z = INT32_MIN;
+
         for (int dim2 = 0; dim2 < height; ++dim2) {
             for (int dim1 = 0; dim1 < width; ++dim1) {
                 // grab block address
@@ -391,17 +398,21 @@ void ImageService::_retrieve_image(unsigned int width,
                 coords.y = y - yshift;
                 coords.z = z - zshift;
 
-                auto raw_data = mappedblocks[coords];
-                
+                if (!(pre_coords == coords))
+                {
+                    raw_data = mappedblocks[coords];
+                    pre_coords = coords;
+                }
+
                 // don't write data if empty
                 if (raw_data) {
-                    raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
+                    const unsigned char*  raw_data_local = raw_data +(zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
 
                     for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
-                        *buffer = *raw_data;
+                        *buffer = *raw_data_local;
 
                         // write buffer in order
-                        ++raw_data;
+                        ++raw_data_local;
                         ++buffer;
                     }
                 }

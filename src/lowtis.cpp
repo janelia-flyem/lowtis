@@ -378,19 +378,23 @@ void ImageService::_retrieve_image(unsigned int width,
         for (int dim2 = 0; dim2 < height; ++dim2) {
             for (int dim1 = 0; dim1 < width; ++dim1) {
                 // grab block address
+                int x = static_cast<int>(toffset[0] + 0.5);
+                int y = static_cast<int>(toffset[1] + 0.5);
+                int z = static_cast<int>(toffset[2] + 0.5);
+                // find offset within block
+                int xshift = x % isoblksize;
+                int yshift = y % isoblksize;
+                int zshift = z % isoblksize;
+
                 BlockCoords coords;
-                coords.x = round(toffset[0]) - (int(round(toffset[0])) % isoblksize);
-                coords.y = round(toffset[1]) - (int(round(toffset[1])) % isoblksize);
-                coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
-                      
+                coords.x = x - xshift;
+                coords.y = y - yshift;
+                coords.z = z - zshift;
+
                 auto raw_data = mappedblocks[coords];
                 
                 // don't write data if empty
                 if (raw_data) {
-                    // find offset within block
-                    int xshift = int(round(toffset[0])) % isoblksize;
-                    int yshift = int(round(toffset[1])) % isoblksize;
-                    int zshift = int(round(toffset[2])) % isoblksize;
                     raw_data += (zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
 
                     for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {

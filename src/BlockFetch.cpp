@@ -41,10 +41,18 @@ vector<libdvid::DVIDCompressedBlock> BlockFetch::intersecting_blocks(
                     // find blocks for arbitrary angle
                     // avoid adding duplicate blocks
                     BlockCoords coords;
-                    coords.x = round(toffset[0]) - (int(round(toffset[0])) % isoblksize);
-                    coords.y = round(toffset[1]) - (int(round(toffset[1])) % isoblksize);
-                    coords.z = round(toffset[2]) - (int(round(toffset[2])) % isoblksize);
-                   
+                    coords.x = static_cast<int>(toffset[0] + 0.5);
+                    coords.y = static_cast<int>(toffset[1] + 0.5);
+                    coords.z = static_cast<int>(toffset[2] + 0.5);
+
+                    int xshift = coords.x % isoblksize;
+                    int yshift = coords.y % isoblksize;
+                    int zshift = coords.z % isoblksize;
+
+                    coords.x -= xshift;
+                    coords.y -= yshift;
+                    coords.z -= zshift;
+
                     // if same as previous block, do not even lookup 
                     if (!(savedcoords == coords)) {
                         if (foundblocks.find(coords) == foundblocks.end()) {

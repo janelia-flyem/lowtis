@@ -18,9 +18,9 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
     Json::Value typeinfo = node_service.get_typeinfo(labeltypename);
     
     // grayscale and labelarray use specific blocks interface
-    // only supports grayscale jpeg and lz4/labelarray labels
+    // only supports grayscale jpeg and lz4/labelarray/labelmap labels
     dvidtype = typeinfo["Base"]["TypeName"].asString();
-    if (dvidtype == "labelarray") {
+    if ((dvidtype == "labelarray") || (dvidtype == "labelmap")) {
         maxlevel = typeinfo["Extended"]["MaxDownresLevel"].asInt();
         usespecificblocks = true;
         compression_type = DVIDCompressedBlock::gzip_labelarray;
@@ -67,8 +67,8 @@ void DVIDBlockFetch::prefetch_blocks(vector<libdvid::DVIDCompressedBlock>& block
 vector<libdvid::DVIDCompressedBlock> DVIDBlockFetch::extract_blocks(
         vector<unsigned int> dims, vector<int> offset, int zoom)
 {
-    if (dvidtype == "labelarray") {
-        throw LowtisErr("labelarray only should use specific block interface");
+    if ((dvidtype == "labelarray") || (dvidtype == "labelmap")) {
+        throw LowtisErr("labelarray or labelmap only should use specific block interface");
     }
     size_t isoblksize = std::get<0>(blocksize);
     // make block aligned dims and offset
@@ -185,18 +185,18 @@ void DVIDBlockFetch::extract_specific_blocks(
             blockcoords.push_back(offset[2]/blocksize);
         }
         string dataname_temp = labeltypename;
-        if ((zoom > 0) && (dvidtype != "labelarray")) {
+        if ((zoom > 0) && (dvidtype != "labelarray") && (dvidtype != "labelmap")) {
             // do not use if explicit zoom levels supported
             dataname_temp += "_" + std::to_string(zoom);
         }
         
         // check against max scale level (easy to do for labelarray)
-        if ((zoom > maxlevel) && (dvidtype == "labelarray")) {
+        if ((zoom > maxlevel) && ((dvidtype == "labelarray") || (dvidtype == "labelmap"))) {
             throw LowtisErr("Trying to request unknown scale level");
         }
 
-        if (dvidtype == "labelarray") {
-            // set scale for labelarray
+        if ((dvidtype == "labelarray") || (dvidtype == "labelmap")) {
+            // set scale for labelarray and labelmap
             node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom);
         } else {
             if (compression_type == DVIDCompressedBlock::uncompressed) {

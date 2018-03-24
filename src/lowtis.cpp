@@ -161,6 +161,20 @@ void ImageService::retrieve_image(unsigned int width,
 void ImageService::_retrieve_image_fovea(unsigned int width,
         unsigned int height, vector<int> offset, char* buffer, int zoom, bool centercut, vector<double> dim1step, vector<double> dim2step)
 {
+    unsigned int cwidth = 0;
+    unsigned int cheight = 0; 
+
+    if (centercut) {
+        // retrieve high-resolution center
+        cwidth = get<0>(config.centercut);
+        cheight = get<0>(config.centercut);
+
+        // if either dimension is smaller than the center cut, disable centercut
+        if ((cwidth >= width) || (cheight >= height)) {
+            centercut = false;
+        }
+    }
+
     if (!centercut) {
         gmutex.lock();
         _retrieve_image(width, height, offset, buffer, zoom, fetcher, dim1step, dim2step);
@@ -169,9 +183,6 @@ void ImageService::_retrieve_image_fovea(unsigned int width,
         // call as boost threads and join
         boost::thread_group threads;
 
-        // retrieve high-resolution center
-        unsigned int cwidth = get<0>(config.centercut);
-        unsigned int cheight = get<0>(config.centercut);
         char *buffer2 = new char[cwidth*cheight*config.bytedepth];
  
         // retrieve 1/4 image at lower resolution

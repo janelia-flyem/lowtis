@@ -112,11 +112,12 @@ void ImageService::retrieve_arbimage(unsigned int width, unsigned int height,
     }
     assert(dotprod > -0.0001 && dotprod < 0.0001);
 
+    /*
     // find true width for zoom 
     for (int i = 0; i < zoom; i++) {
         width *= 2;
         height *= 2;
-    }
+    }*/
     
     // calculate unit vector 
     vector<double> dim1step;

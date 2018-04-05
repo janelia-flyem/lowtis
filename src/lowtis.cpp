@@ -373,6 +373,7 @@ void ImageService::_retrieve_image(unsigned int width,
        
         // set default value for image 
         auto bufferset = buffer;
+        assert((config.emptyval == 0) || (config.bytedepth == 1));
         for (int dim2 = 0; dim2 < height; ++dim2) {
             for (int dim1 = 0; dim1 < width; ++dim1) {
                 for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
@@ -418,7 +419,7 @@ void ImageService::_retrieve_image(unsigned int width,
 
                 // don't write data if empty
                 if (raw_data) {
-                    const unsigned char*  raw_data_local = raw_data +(zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift);
+                    const unsigned char*  raw_data_local = raw_data +(zshift*(isoblksize*isoblksize) + yshift*isoblksize + xshift)*config.bytedepth;
 
                     for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
                         *buffer = *raw_data_local;

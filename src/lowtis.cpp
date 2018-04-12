@@ -148,7 +148,7 @@ void ImageService::retrieve_arbimage(unsigned int width, unsigned int height,
 
     int offset0 = -1*int(width)/2;
     int offset1 = -1*int(height)/2;
-    for (int i = 1; i < zoom; ++i) {
+    for (int i = 0; i < zoom; ++i) {
         offset0 *= 2;
         offset1 *= 2;
     }

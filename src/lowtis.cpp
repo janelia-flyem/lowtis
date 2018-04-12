@@ -428,6 +428,8 @@ void ImageService::_retrieve_image(unsigned int width,
                         ++raw_data_local;
                         ++buffer;
                     }
+                } else {
+                    buffer += config.bytedepth;
                 }
 
                 toffset[0] += dim1step[0];

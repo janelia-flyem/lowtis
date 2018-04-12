@@ -146,7 +146,14 @@ void ImageService::retrieve_arbimage(unsigned int width, unsigned int height,
     vector<int> offset = centerloc;
     vector<double> dummyvec(3,0);
 
-    increment_vector(offset, dim1step, dim2step, dummyvec, -1*int(width)/2, -1*int(height)/2, 0);
+    int offset0 = -1*int(width)/2;
+    int offset1 = -1*int(height)/2;
+    for (int i = 1; i < zoom; ++i) {
+        offset0 *= 2;
+        offset1 *= 2;
+    }
+
+    increment_vector(offset, dim1step, dim2step, dummyvec, offset0, offset1, 0);
 
     _retrieve_image_fovea(width, height, offset, buffer, zoom, centercut, dim1step, dim2step); 
 }

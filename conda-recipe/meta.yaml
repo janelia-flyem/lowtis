@@ -22,7 +22,7 @@ requirements:
     - boost 1.64.*
     
   run:
-    - libdvid-cpp 0.3.post50
+    - libdvid-cpp >=0.3.post50,<0.3.post51
     - boost 1.64.*
 
 about:

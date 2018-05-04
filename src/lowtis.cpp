@@ -379,18 +379,9 @@ void ImageService::_retrieve_image(unsigned int width,
         size_t isoblksize = current_blocks[0].get_blocksize();
        
         // set default value for image 
-        auto bufferset = buffer;
         assert((config.emptyval == 0) || (config.bytedepth == 1));
-        for (int dim2 = 0; dim2 < height; ++dim2) {
-            for (int dim1 = 0; dim1 < width; ++dim1) {
-                for (int bytepos = 0; bytepos < config.bytedepth; ++bytepos) {
-                    // TODO: properly set for entire bytedepth
-                    *bufferset = config.emptyval; 
-                    ++bufferset;
-                }
-            }
-        }
-
+        memset(buffer, config.emptyval, width*height*config.bytedepth);
+        
         vector<double> toffset(3);
         toffset[0] = offset[0];
         toffset[1] = offset[1];

@@ -66,6 +66,11 @@ class ImageService {
     */
     void flush_cache();
 
+    /*
+     * Changes center cut configuration.
+    */
+    void set_centercut(std::tuple<int, int>& centercut);
+
   private:
     /*!
      * Retrieve image plane.  If no plane is defined, it just

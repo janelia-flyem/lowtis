@@ -69,7 +69,7 @@ class ImageService {
     /*
      * Changes center cut configuration.
     */
-    void set_centercut(std::tuple<int, int>& centercut);
+    void set_centercut(const std::tuple<int, int>&& centercut);
 
   private:
     /*!

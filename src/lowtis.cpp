@@ -40,7 +40,7 @@ void ImageService::pause()
     gmutex.unlock();
 }
 
-void ImageService::set_centercut(std::tuple<int, int>& centercut)
+void ImageService::set_centercut(const std::tuple<int, int>& centercut)
 {
     config.centercut = centercut;
 }

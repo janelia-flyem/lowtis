@@ -20,10 +20,12 @@ requirements:
     - cmake
     - libdvid-cpp >=0.3.post52
     - boost 1.64.*
+    - jsoncpp 1.8*
     
   run:
     - libdvid-cpp >=0.3.post52
     - boost 1.64.*
+    - jsoncpp 1.8*
 
 about:
   home: http://github.com/janelia-flyem/lowtis

@@ -5,8 +5,9 @@ if [[ $(uname) == 'Darwin' ]]; then
     CXX=clang++
 else
     DYLIB_EXT=so
-    CC=gcc
-    CXX=g++
+    # Don't specify these -- let conda-build do it.
+    #CC=gcc
+    #CXX=g++
 fi
 
 CONFIGURE_ONLY=0

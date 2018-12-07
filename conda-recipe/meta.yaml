@@ -17,6 +17,9 @@ build:
 
 requirements:
   build:
+    - gxx_linux-64 # [linux]
+    - cmake
+  host:
     - cmake
     - libdvid-cpp >=0.3.post52
     - boost 1.64.*

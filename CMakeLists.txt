@@ -17,6 +17,22 @@ if (APPLE)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
+# When using gcc, specify whether or not to enable the C++11 ABI.
+# Our default is to disable it.
+# If we didn't specify it, gcc-5 enables the C++11 ABI by default,
+# which is ABI-incompatible with libraries built with gcc-4.
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(_GLIBCXX_USE_CXX11_ABI 0 CACHE BOOL
+        "Passed to gcc as a preprocessor definition. See gcc docs for _GLIBCXX_USE_CXX11_ABI")
+    
+    if (_GLIBCXX_USE_CXX11_ABI)
+        add_definitions("-D_GLIBCXX_USE_CXX11_ABI=1")
+    else()
+        add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
+    endif()
+endif()
+
+
 
 set(BOOST_COMPONENTS thread system)
 

@@ -49,6 +49,7 @@ class DVIDBlockFetch : public BlockFetch {
     std::string dvidtype;
     bool usehighiopquery;
     libdvid::DVIDNodeService node_service;
+    bool supervoxelview;
 };
 
 }

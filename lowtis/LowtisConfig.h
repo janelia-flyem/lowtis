@@ -57,6 +57,7 @@ struct DVIDConfig : public LowtisConfig {
     std::string dvid_server;
     std::string dvid_uuid;
     std::string datatypename;
+    bool supervoxelview = false;
     bool usehighiopquery = true;
 };
 

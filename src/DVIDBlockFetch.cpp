@@ -9,7 +9,8 @@ using std::string; using std::vector; using std::unordered_map;
 
 DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
         labeltypename(config.datatypename), usehighiopquery(config.usehighiopquery),
-        node_service(config.dvid_server, config.dvid_uuid, config.username, "lowtis") 
+        node_service(config.dvid_server, config.dvid_uuid, config.username, "lowtis"),
+	supervoxelview(config.supervoxelview)
 {
     size_t isoblksize = node_service.get_blocksize(labeltypename); 
     blocksize = std::make_tuple(isoblksize, isoblksize, isoblksize);
@@ -197,7 +198,7 @@ void DVIDBlockFetch::extract_specific_blocks(
 
         if ((dvidtype == "labelarray") || (dvidtype == "labelmap")) {
             // set scale for labelarray and labelmap
-            node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom);
+            node_service.get_specificblocks3D(dataname_temp, blockcoords, true, newblocks, zoom, false, supervoxelview);
         } else {
             if (compression_type == DVIDCompressedBlock::uncompressed) {
                 //std::cout << "blah0" << std::endl;

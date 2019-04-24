@@ -17,17 +17,17 @@ build:
 
 requirements:
   build:
-    - gxx_linux-64 # [linux]
+    - {{ compiler('cxx') }}
     - cmake
   host:
     - cmake
-    - libdvid-cpp >=0.3.post52
-    - boost 1.64.*
+    - libdvid-cpp >=0.3.post83 # new compilers
+    - boost {{ boost }}*
     - jsoncpp 1.8*
     
   run:
-    - libdvid-cpp >=0.3.post52
-    - boost 1.64.*
+    - libdvid-cpp >=0.3.post83 # new compilers
+    - boost {{ boost }}*
     - jsoncpp 1.8*
 
 about:

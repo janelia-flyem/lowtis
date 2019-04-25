@@ -6,6 +6,7 @@
 #include <lowtis/LowtisConfig.h>
 #include <mutex>
 #include <unordered_map>
+#include <iostream>
 #include <libdvid/DVIDNodeService.h>
 
 #include <boost/asio/io_service.hpp>

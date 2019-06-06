@@ -49,20 +49,12 @@ if (NOT LZ4_LIBRARY)
     message(FATAL_ERROR "*** Could not find lz4 library ***")
 endif()
 
-if (UNIX AND NOT APPLE)
-    include (FindPkgConfig)
-    PKG_SEARCH_MODULE(JSON REQUIRED jsoncpp)
-    include_directories(BEFORE ${JSON_INCLUDE_DIRS})
-else()
-    FIND_LIBRARY(JSON_LIBRARIES jsoncpp)
-
-    if (NOT JSON_LIBRARIES)
-        message(FATAL_ERROR "*** Could not find jsoncpp library ***")
-    endif()
+FIND_LIBRARY(JSON_LIBRARIES jsoncpp)
+if (NOT JSON_LIBRARIES)
+    message(FATAL_ERROR "*** Could not find jsoncpp library ***")
 endif()
 
-#set (support_LIBS ${LIBDVIDCPP_LIBRARIES} ${JSON_LIBRARIES} ${boost_LIBS} ${PNG_LIBRARIES} ${CURL_LIBRARIES} ${JPEG_LIBRARIES} ${LZ4_LIBRARY})
-set (support_LIBS ${DVIDCPP_LIBRARY} ${boost_LIBS} jsoncpp)
+set (support_LIBS ${DVIDCPP_LIBRARY} ${boost_LIBS} ${JSON_LIBRARIES})
 
 include_directories (BEFORE ${CMAKE_SOURCE_DIR}/lowtis ${CMAKE_SOURCE_DIR})
 

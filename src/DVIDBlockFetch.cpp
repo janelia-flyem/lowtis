@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include "BlockCache.h"
 #include <lowtis/lowtis.h>
+#include <boost/algorithm/string.hpp>
 
 using namespace lowtis; using namespace libdvid;
 using std::string; using std::vector; using std::unordered_map;
@@ -28,12 +29,17 @@ DVIDBlockFetch::DVIDBlockFetch(DVIDConfig& config) :
     } else if (bytedepth == 1) {
         usespecificblocks = true;
         string compression_string = typeinfo["Base"]["Compression"].asString();
-        if (compression_string.find("LZ4") == 0) {
+        boost::algorithm::to_lower(compression_string);
+
+        if (compression_string.find("jpeg") == 0) {
+            compression_type = DVIDCompressedBlock::jpeg;
+        } else if (compression_string.find("lz4") == 0 or compression_string.find("no compression") == 0) {
             compression_type = DVIDCompressedBlock::uncompressed;
         } else {
-            compression_type = DVIDCompressedBlock::jpeg;
+            std::string msg = "data instance " + labeltypename + " specifies an unrecognized compression type: " + compression_string;
+            throw LowtisErr(msg);
         }
-    }  else {
+    } else {
         compression_type = DVIDCompressedBlock::lz4;
     }
 }

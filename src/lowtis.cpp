@@ -466,6 +466,10 @@ void ImageService::_retrieve_image(unsigned int width,
                 raw_data = raw_data_ptr->get_raw();
             }
 
+            if (raw_data_ptr->length() < blocksize*blocksize*blocksize) {
+                continue;
+            }
+
             // extract common dim3 offset (will refer to as 'z')
             vector<int> toffset = iter->get_offset();
             int zoff = offset[2] - toffset[2];

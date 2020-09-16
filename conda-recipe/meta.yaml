@@ -19,8 +19,8 @@ requirements:
   build:
     - {{ compiler('cxx') }}
     - cmake
+    - make
   host:
-    - cmake
     - libdvid-cpp >=0.3.post83 # new compilers
     - boost {{ boost }}*
     - jsoncpp 1.8*

@@ -464,10 +464,9 @@ void ImageService::_retrieve_image(unsigned int width,
             if (!emptyblock) {
                 raw_data_ptr = iter->get_uncompressed_data();
                 raw_data = raw_data_ptr->get_raw();
-            }
-
-            if (raw_data_ptr->length() < blocksize*blocksize*blocksize) {
-                continue;
+                if (raw_data_ptr->length() < blocksize * blocksize * blocksize) {
+                    emptyblock = true;
+                }
             }
 
             // extract common dim3 offset (will refer to as 'z')

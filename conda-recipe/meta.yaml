@@ -21,14 +21,14 @@ requirements:
     - cmake
     - make
   host:
-    - libdvid-cpp >=0.3.post83 # new compilers
-    - boost {{ boost }}*
-    - jsoncpp 1.8*
-    
+    - libdvid-cpp >=0.3.post117
+    - boost {{ boost }}
+    - jsoncpp {{ jsoncpp }}
+      
   run:
-    - libdvid-cpp >=0.3.post83 # new compilers
-    - boost {{ boost }}*
-    - jsoncpp 1.8*
+    - libdvid-cpp >=0.3.post117
+    - boost {{ boost }}
+    - jsoncpp {{ jsoncpp }}
 
 about:
   home: http://github.com/janelia-flyem/lowtis

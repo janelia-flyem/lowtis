@@ -12,7 +12,7 @@ source:
   path: ../
 
 build:
-  number: 1
+  number: 0
   string: {{PKG_BUILDNUM}}_g{{GIT_FULL_HASH[:7]}}
 
 requirements:
@@ -21,12 +21,12 @@ requirements:
     - cmake
     - make
   host:
-    - libdvid-cpp >=0.3.post117
+    - libdvid-cpp >=0.3.post119
     - boost {{ boost }}
     - jsoncpp {{ jsoncpp }}
       
   run:
-    - libdvid-cpp >=0.3.post117
+    - libdvid-cpp >=0.3.post119
     - boost {{ boost }}
     - jsoncpp {{ jsoncpp }}
 

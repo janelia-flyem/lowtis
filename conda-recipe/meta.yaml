@@ -21,12 +21,12 @@ requirements:
     - cmake
     - make
   host:
-    - libdvid-cpp >=0.3.post119
+    - libdvid-cpp >=0.4.post17
     - boost {{ boost }}
     - jsoncpp {{ jsoncpp }}
       
   run:
-    - libdvid-cpp >=0.3.post119
+    - libdvid-cpp >=0.4.post17
     - boost {{ boost }}
     - jsoncpp {{ jsoncpp }}
 

@@ -22,13 +22,16 @@ requirements:
     - make
   host:
     - libdvid-cpp >=0.4.post17
-    - boost {{ boost }}
+    - libboost-devel {{ libboost_devel }}
     - jsoncpp {{ jsoncpp }}
       
   run:
     - libdvid-cpp >=0.4.post17
-    - boost {{ boost }}
     - jsoncpp {{ jsoncpp }}
+
+    # I think this is handled by the run_exports of libboost-devel
+    # - libboost {{ libboost }}
+
 
 about:
   home: http://github.com/janelia-flyem/lowtis

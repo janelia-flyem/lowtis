@@ -3,7 +3,7 @@ project (lowtis)
 
 include (ExternalProject)
 
-set (RUN_ENVIRONMENT "Workstation" CACHE TYPE STRING)
+set (RUN_ENVIRONMENT "Workstation" CACHE STRING "Build environment type")
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE Release)
 endif ()
@@ -63,21 +63,41 @@ target_link_libraries (lowtis ${support_LIBS})
 # config file for CMake FIND_PACKAGE command
 set (lowtis_version "0.1.0")
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}")
-export(TARGETS lowtis FILE "${PROJECT_BINARY_DIR}/lowtisTargets.cmake")
 
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/config/lowtisConfig.cmake.in
+# Create and install proper export targets
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake"
+    VERSION ${lowtis_version}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_file(${PROJECT_SOURCE_DIR}/config/lowtisConfig.cmake.in
     ${PROJECT_BINARY_DIR}/lowtisConfig.cmake
-    @ONLY IMMEDIATE)
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/config/lowtisConfigVersion.cmake.in
-    ${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake
-    @ONLY IMMEDIATE)
+    @ONLY
+)
 
-# installation for library
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/lowtis DESTINATION include)
-INSTALL(TARGETS lowtis DESTINATION lib)
-INSTALL(FILES ${PROJECT_BINARY_DIR}/lowtisConfig.cmake
-${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake ${PROJECT_BINARY_DIR}/lowtisTargets.cmake
-DESTINATION lib${LIB_SUFFIX}/lowtis)
+# Installation
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/lowtis DESTINATION include)
+install(TARGETS lowtis
+    EXPORT lowtisTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+install(EXPORT lowtisTargets
+    FILE lowtisTargets.cmake
+    NAMESPACE lowtis::
+    DESTINATION lib/cmake/lowtis
+)
+
+install(FILES
+    "${PROJECT_BINARY_DIR}/lowtisConfig.cmake"
+    "${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake"
+    DESTINATION lib/cmake/lowtis
+)
 
 
 

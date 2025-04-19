@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.21)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.30)
 project (lowtis)
 
 include (ExternalProject)
@@ -17,29 +17,20 @@ if (APPLE)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
-set(BOOST_COMPONENTS thread system)
-
 if (LIBDVID_INCLUDE)
     include_directories(AFTER ${LIBDVID_INCLUDE_DIR})
 endif()
 
-FIND_PACKAGE(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-include_directories(AFTER ${Boost_INCLUDE_DIR})
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set (PLATFORM_DYLIB_EXTENSION "dylib")
-else()
-    set (PLATFORM_DYLIB_EXTENSION "so")
-endif()
-if (NOT Boost_LIBRARY_DIR_RELEASE)
-    set(Boost_LIBRARY_DIR_RELEASE ${Boost_LIBRARY_DIR})
-endif()
-if (Boost_LIBRARY_DIR_RELEASE)
-    set (boost_LIBS ${Boost_LIBRARY_DIR_RELEASE}/libboost_thread.${PLATFORM_DYLIB_EXTENSION} ${Boost_LIBRARY_DIR_RELEASE}/libboost_system.${PLATFORM_DYLIB_EXTENSION})
-else()
-    set (boost_LIBS Boost::thread Boost::system)
-endif()
+# Find Boost using CONFIG mode
+find_package(Boost REQUIRED CONFIG COMPONENTS thread system)
+include_directories(AFTER ${Boost_INCLUDE_DIRS})
+
+# Set boost libraries using modern target-based approach
+set(boost_LIBS Boost::thread Boost::system)
+
 if (LIBDVID_WRAP_PYTHON)
-    set(boostpython_LIB ${Boost_LIBRARY_DIR_RELEASE}/libboost_python.${PLATFORM_DYLIB_EXTENSION})
+    find_package(Boost REQUIRED CONFIG COMPONENTS python)
+    set(boostpython_LIB Boost::python)
 endif()
 
 FIND_LIBRARY(DVIDCPP_LIBRARY dvidcpp)

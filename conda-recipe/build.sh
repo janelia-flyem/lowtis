@@ -35,6 +35,7 @@ cmake ..\
         -DBoost_LIBRARY_DIR="${PREFIX}/lib" \
         -DBoost_INCLUDE_DIR="${PREFIX}/include" \
         -DLIBDVID_INCLUDE="${PREFIX}/include" \
+        -DCMAKE_OSX_ARCHITECTURES="$(uname -m)" \
 ##
 
 if [[ $CONFIGURE_ONLY == 0 ]]; then

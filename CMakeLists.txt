@@ -1,9 +1,9 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.30)
 project (lowtis)
 
 include (ExternalProject)
 
-set (RUN_ENVIRONMENT "Workstation" CACHE TYPE STRING)
+set (RUN_ENVIRONMENT "Workstation" CACHE STRING "Build environment type")
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE Release)
 endif ()
@@ -17,41 +17,23 @@ if (APPLE)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
-set(BOOST_COMPONENTS thread system)
-
 if (LIBDVID_INCLUDE)
     include_directories(AFTER ${LIBDVID_INCLUDE_DIR})
 endif()
 
-FIND_PACKAGE(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-include_directories(AFTER ${Boost_INCLUDE_DIR})
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set (PLATFORM_DYLIB_EXTENSION "dylib")
-else()
-    set (PLATFORM_DYLIB_EXTENSION "so")
-endif()
-if (NOT Boost_LIBRARY_DIR_RELEASE)
-    set(Boost_LIBRARY_DIR_RELEASE ${Boost_LIBRARY_DIR})
-endif()
-if (Boost_LIBRARY_DIR_RELEASE)
-    set (boost_LIBS ${Boost_LIBRARY_DIR_RELEASE}/libboost_thread.${PLATFORM_DYLIB_EXTENSION} ${Boost_LIBRARY_DIR_RELEASE}/libboost_system.${PLATFORM_DYLIB_EXTENSION})
-else()
-    set (boost_LIBS Boost::thread Boost::system)
-endif()
+# Find Boost using CONFIG mode
+find_package(Boost REQUIRED CONFIG COMPONENTS thread system)
+include_directories(AFTER ${Boost_INCLUDE_DIRS})
+
+# Set boost libraries using modern target-based approach
+set(boost_LIBS Boost::thread Boost::system)
+
 if (LIBDVID_WRAP_PYTHON)
-    set(boostpython_LIB ${Boost_LIBRARY_DIR_RELEASE}/libboost_python.${PLATFORM_DYLIB_EXTENSION})
+    find_package(Boost REQUIRED CONFIG COMPONENTS python)
+    set(boostpython_LIB Boost::python)
 endif()
 
-FIND_PACKAGE(PNG REQUIRED)
-#FIND_PACKAGE(JPEG REQUIRED)
-FIND_LIBRARY(JPEG turbojpeg)
-FIND_PACKAGE(CURL REQUIRED)
-FIND_LIBRARY(LZ4_LIBRARY lz4)
 FIND_LIBRARY(DVIDCPP_LIBRARY dvidcpp)
-
-if (NOT LZ4_LIBRARY)
-    message(FATAL_ERROR "*** Could not find lz4 library ***")
-endif()
 
 FIND_LIBRARY(JSON_LIBRARIES jsoncpp)
 if (NOT JSON_LIBRARIES)
@@ -81,21 +63,41 @@ target_link_libraries (lowtis ${support_LIBS})
 # config file for CMake FIND_PACKAGE command
 set (lowtis_version "0.1.0")
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}")
-export(TARGETS lowtis FILE "${PROJECT_BINARY_DIR}/lowtisTargets.cmake")
 
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/config/lowtisConfig.cmake.in
+# Create and install proper export targets
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake"
+    VERSION ${lowtis_version}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_file(${PROJECT_SOURCE_DIR}/config/lowtisConfig.cmake.in
     ${PROJECT_BINARY_DIR}/lowtisConfig.cmake
-    @ONLY IMMEDIATE)
-CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/config/lowtisConfigVersion.cmake.in
-    ${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake
-    @ONLY IMMEDIATE)
+    @ONLY
+)
 
-# installation for library
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/lowtis DESTINATION include)
-INSTALL(TARGETS lowtis DESTINATION lib)
-INSTALL(FILES ${PROJECT_BINARY_DIR}/lowtisConfig.cmake
-${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake ${PROJECT_BINARY_DIR}/lowtisTargets.cmake
-DESTINATION lib${LIB_SUFFIX}/lowtis)
+# Installation
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/lowtis DESTINATION include)
+install(TARGETS lowtis
+    EXPORT lowtisTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+install(EXPORT lowtisTargets
+    FILE lowtisTargets.cmake
+    NAMESPACE lowtis::
+    DESTINATION lib/cmake/lowtis
+)
+
+install(FILES
+    "${PROJECT_BINARY_DIR}/lowtisConfig.cmake"
+    "${PROJECT_BINARY_DIR}/lowtisConfigVersion.cmake"
+    DESTINATION lib/cmake/lowtis
+)
 
 
 
